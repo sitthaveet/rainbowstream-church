@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "firebase-data-connect": {
+      "source": "firebase/skills",
+      "sourceType": "github",
+      "skillPath": "skills/firebase-data-connect-basics/SKILL.md",
+      "computedHash": "a16755e052750ac7ab6a0aecc590ff44ce1829c83fd7251079bf911a5bee8c49"
+    },
+    "line-liff": {
+      "source": "abgne/line-dev",
+      "sourceType": "github",
+      "skillPath": "skills/line-liff/SKILL.md",
+      "computedHash": "9700783697e210a83a235ef316a3a3734a6e32930e40b68543cde942106a6d7d"
+    },
+    "line-login": {
+      "source": "abgne/line-dev",
+      "sourceType": "github",
+      "skillPath": "skills/line-login/SKILL.md",
+      "computedHash": "bd6f6cfb3d73ae980ab09a46428abb6c4aa0310e9ff5d028d0d6ac6b5510ae35"
+    }
+  }
+}

@@ -47,3 +47,40 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- Event details
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    location TEXT,
+
+    -- Schedule
+    starts_at TIMESTAMP NOT NULL,
+    ends_at TIMESTAMP,
+
+    -- Check-in: code embedded in the QR attendees scan at the event
+    checkin_code VARCHAR(100) NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+
+    -- Pastor who created the event
+    created_by UUID NOT NULL REFERENCES users(id),
+
+    -- System fields
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CHECK (ends_at IS NULL OR ends_at >= starts_at)
+);
+
+CREATE TABLE checkins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    checked_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- An attendee can only check in once per event
+    UNIQUE (event_id, user_id)
+);

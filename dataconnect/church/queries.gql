@@ -1,0 +1,156 @@
+# Rainbow Stream Church — read operations.
+#
+# All operations are level: PUBLIC: the Next.js API route handlers proxy every
+# database call and enforce the authorization rules in AGENTS.md (pastors
+# manage events/check-ins; members read/edit only their own profile). The
+# `insecureReason` records that acknowledgement so deploys are not blocked.
+
+# ─── Users ──────────────────────────────────────────────────────────────────
+
+# Resolve the account for a LINE login. Returns [] if the user is new.
+query GetUserByLineId($lineId: String!)
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  users(where: { lineId: { eq: $lineId } }, limit: 1) {
+    id
+    lineId
+    firstName
+    lastName
+    nickname
+    birthdate
+    email
+    phoneNumber
+    address
+    sexAtBirth
+    identityOrientation
+    identityOrientationOther
+    christianDuration
+    church
+    selfIntroduction
+    points
+    role
+    createdAt
+    updatedAt
+  }
+}
+
+# Single user by primary key (profile screen, route-handler authorization).
+query GetUserById($id: UUID!)
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  user(id: $id) {
+    id
+    lineId
+    firstName
+    lastName
+    nickname
+    birthdate
+    email
+    phoneNumber
+    address
+    sexAtBirth
+    identityOrientation
+    identityOrientationOther
+    christianDuration
+    church
+    selfIntroduction
+    points
+    role
+    createdAt
+    updatedAt
+  }
+}
+
+# Member management (pastor only — enforced in the route handler).
+query ListUsers
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  users(orderBy: [{ createdAt: DESC }]) {
+    id
+    firstName
+    lastName
+    nickname
+    email
+    phoneNumber
+    points
+    role
+    createdAt
+  }
+}
+
+# ─── Events ─────────────────────────────────────────────────────────────────
+
+# All events, soonest first.
+query ListEvents
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  events(orderBy: [{ startsAt: DESC }]) {
+    id
+    title
+    description
+    location
+    startsAt
+    endsAt
+    checkinCode
+    createdById
+    createdAt
+  }
+}
+
+# Single event by id.
+query GetEventById($id: UUID!)
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  event(id: $id) {
+    id
+    title
+    description
+    location
+    startsAt
+    endsAt
+    checkinCode
+    createdById
+    createdAt
+    updatedAt
+  }
+}
+
+# Resolve a scanned QR code to its event. Returns [] for an invalid code.
+query GetEventByCheckinCode($checkinCode: UUID!)
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  events(where: { checkinCode: { eq: $checkinCode } }, limit: 1) {
+    id
+    title
+    description
+    location
+    startsAt
+    endsAt
+  }
+}
+
+# ─── Check-ins ──────────────────────────────────────────────────────────────
+
+# Attendance for one event (pastor only — enforced in the route handler).
+query ListEventCheckins($eventId: UUID!)
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  checkins(where: { eventId: { eq: $eventId } }, orderBy: [{ checkedInAt: ASC }]) {
+    id
+    checkedInAt
+    user {
+      id
+      firstName
+      lastName
+      nickname
+    }
+  }
+}
+
+# A member's own check-in history.
+query ListUserCheckins($userId: UUID!)
+  @auth(level: PUBLIC, insecureReason: "Authorization enforced by Next.js route handlers (AGENTS.md).") {
+  checkins(where: { userId: { eq: $userId } }, orderBy: [{ checkedInAt: DESC }]) {
+    id
+    checkedInAt
+    event {
+      id
+      title
+      location
+      startsAt
+    }
+  }
+}

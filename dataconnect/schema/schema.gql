@@ -1,0 +1,117 @@
+# Rainbow Stream Church — Firebase Data Connect schema
+#
+# Mirrors SCHEMA.md. Data Connect owns the Postgres schema, so the GraphQL
+# types below ARE the source of truth for the database. CHECK-style value
+# constraints from SCHEMA.md are expressed here as GraphQL enums.
+
+# ─── Enums ──────────────────────────────────────────────────────────────────
+# Each becomes a native Postgres ENUM type, restricting values like a SQL CHECK.
+
+enum UserRole {
+  pastor
+  member
+}
+
+enum SexAtBirth {
+  male
+  female
+  intersex
+}
+
+enum IdentityOrientation {
+  gay_lesbian
+  bisexual
+  straight
+  transgender
+  other
+}
+
+# ─── users ───────────────────────────────────────────────────────────────────
+
+type User @table(name: "users") {
+  id: UUID! @default(expr: "uuidV4()")
+
+  # LINE identity: the LIFF userId (sub), known at first login. This is the
+  # only field populated when an account is auto-created; everything else is
+  # filled in later via the registration form.
+  lineId: String! @col(name: "line_id", dataType: "varchar(100)") @unique
+
+  # Profile fields below are NULL until the user completes registration.
+
+  # Basic identity
+  firstName: String @col(name: "first_name", dataType: "varchar(100)")
+  lastName: String @col(name: "last_name", dataType: "varchar(100)")
+  nickname: String @col(dataType: "varchar(100)")
+  birthdate: Date
+
+  # Contact
+  email: String @col(dataType: "varchar(255)") @unique
+  phoneNumber: String @col(name: "phone_number", dataType: "varchar(50)")
+  address: String
+
+  # Personal profile
+  sexAtBirth: SexAtBirth @col(name: "sex_at_birth")
+  identityOrientation: IdentityOrientation @col(name: "identity_orientation")
+  identityOrientationOther: String @col(name: "identity_orientation_other")
+
+  # Christian background
+  # Number of years the user has been a Christian (0 = not a Christian).
+  christianDuration: Int @col(name: "christian_duration")
+  church: String @col(dataType: "varchar(255)")
+
+  selfIntroduction: String @col(name: "self_introduction")
+
+  # Gamification: points earned by the user (e.g. via event check-ins).
+  points: Int! @default(value: 0)
+
+  # Access role
+  role: UserRole! @default(value: "member")
+
+  # System fields
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  updatedAt: Timestamp! @col(name: "updated_at") @default(expr: "request.time")
+}
+
+# ─── events ──────────────────────────────────────────────────────────────────
+
+type Event @table(name: "events") {
+  id: UUID! @default(expr: "uuidV4()")
+
+  # Event details
+  title: String! @col(dataType: "varchar(255)")
+  description: String
+  location: String
+
+  # Schedule
+  startsAt: Timestamp! @col(name: "starts_at")
+  endsAt: Timestamp @col(name: "ends_at")
+
+  # Check-in: code embedded in the QR attendees scan at the event.
+  checkinCode: UUID! @col(name: "checkin_code") @default(expr: "uuidV4()") @unique
+
+  # Pastor who created the event. Nullable so the FK is ON DELETE SET NULL:
+  # an event stands on its own and outlives the pastor who created it.
+  createdBy: User @ref(fields: "createdById", references: "id")
+  createdById: UUID @col(name: "created_by")
+
+  # System fields
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  updatedAt: Timestamp! @col(name: "updated_at") @default(expr: "request.time")
+}
+
+# ─── checkins ──────────────────────────────────────────────────────────────────
+# An attendee can only check in once per event — enforced by the composite
+# unique constraint on (event_id, user_id). Data Connect auto-indexes both
+# foreign-key columns, so no explicit @index is needed for either direction.
+
+type Checkin @table(name: "checkins") @unique(fields: ["eventId", "userId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+
+  event: Event! @ref(fields: "eventId", references: "id")
+  eventId: UUID! @col(name: "event_id")
+
+  user: User! @ref(fields: "userId", references: "id")
+  userId: UUID! @col(name: "user_id")
+
+  checkedInAt: Timestamp! @col(name: "checked_in_at") @default(expr: "request.time")
+}

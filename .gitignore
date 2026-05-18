@@ -4,3 +4,8 @@
 # Editor
 .vscode/
 .idea/
+
+# Firebase
+.firebase/
+*-debug.log
+.runtimeconfig.json

@@ -27,7 +27,7 @@ This project is a web-based for Rainbow Stream church management. It's very simp
 
 # Context
 - For Design go to @DESIGN.md
-- For Database schema go to @SCHEMA.md
+- For Database schema, check at @dataconnect/schema/schema.gql
 
 # Security
 - Only pastor role can create, update, delete events and view, update, delete check-in data.

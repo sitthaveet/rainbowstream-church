@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getUserById,
-  listUsers,
   updateUserProfile,
   deleteUser,
   type UpdateUserProfileVariables,
 } from "@dataconnect/generated";
+import { getUserById, listUsers } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { ApiError, handleRoute, parseBody, isUniqueViolation } from "@/lib/api";
 import { requireSelfOrPastor, requirePastor } from "@/lib/auth";

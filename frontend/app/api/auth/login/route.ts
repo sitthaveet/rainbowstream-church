@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserByLineId,
-  getUserById,
-  createUser,
-} from "@dataconnect/generated";
+import { createUser } from "@dataconnect/generated";
+import { getUserByLineId, getUserById } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { ApiError, handleRoute, parseBody, isUniqueViolation } from "@/lib/api";
 import { loginSchema } from "@/lib/validation";

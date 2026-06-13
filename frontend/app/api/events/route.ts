@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  listEvents,
-  createEvent,
-  getEventById,
-  UserRole,
-} from "@dataconnect/generated";
+import { createEvent, UserRole } from "@dataconnect/generated";
+import { listEvents, getEventById } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { handleRoute, parseBody } from "@/lib/api";
 import { requireAuth, requirePastor } from "@/lib/auth";

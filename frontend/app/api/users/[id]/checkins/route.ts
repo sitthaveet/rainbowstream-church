@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listUserCheckins } from "@dataconnect/generated";
+import { listUserCheckins } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { handleRoute } from "@/lib/api";
 import { requireSelfOrPastor } from "@/lib/auth";

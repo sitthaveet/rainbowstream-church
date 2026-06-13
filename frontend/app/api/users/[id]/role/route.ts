@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserById,
-  listUsers,
-  updateUserRole,
-  UserRole,
-} from "@dataconnect/generated";
+import { updateUserRole, UserRole } from "@dataconnect/generated";
+import { getUserById, listUsers } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { ApiError, handleRoute, parseBody } from "@/lib/api";
 import { requirePastor } from "@/lib/auth";

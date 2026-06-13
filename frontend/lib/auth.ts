@@ -1,4 +1,5 @@
-import { getUserById, type GetUserByIdData } from "@dataconnect/generated";
+import { type GetUserByIdData } from "@dataconnect/generated";
+import { getUserById } from "./db";
 import { dc } from "./dataconnect";
 import { readSession, clearSessionCookie } from "./session";
 import { ApiError } from "./api";

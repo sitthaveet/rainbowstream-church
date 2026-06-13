@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listUsers } from "@dataconnect/generated";
+import { listUsers } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { handleRoute } from "@/lib/api";
 import { requirePastor } from "@/lib/auth";

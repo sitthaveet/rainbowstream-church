@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEventById, listEventCheckins } from "@dataconnect/generated";
+import { getEventById, listEventCheckins } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { ApiError, handleRoute } from "@/lib/api";
 import { requirePastor } from "@/lib/auth";

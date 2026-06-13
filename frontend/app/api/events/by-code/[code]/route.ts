@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEventByCheckinCode } from "@dataconnect/generated";
+import { getEventByCheckinCode } from "@/lib/db";
 import { dc } from "@/lib/dataconnect";
 import { ApiError, handleRoute } from "@/lib/api";
 import { requireAuth } from "@/lib/auth";

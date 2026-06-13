@@ -32,8 +32,16 @@ function isRealCalendarDate(s: string): boolean {
  * Validates a UUID path param (event id, user id, check-in code). Without this,
  * a malformed id flows into a `UUID!` Data Connect variable, which the backend
  * rejects as an opaque 500; here it is a clean 400 instead.
+ *
+ * Data Connect *emits* UUIDs as 32-char hex without hyphens (verified against
+ * the emulator), while scanned QR codes or clients may echo back either that
+ * or the canonical hyphenated form. Data Connect accepts both as variables
+ * (also verified), so both are valid here — z.uuid() alone would reject every
+ * id the database itself produces.
  */
-const uuid = z.uuid();
+const UUID_RE =
+  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})$/i;
+const uuid = z.string().regex(UUID_RE, "Invalid UUID");
 export function assertUuid(value: string, label = "id"): void {
   if (!uuid.safeParse(value).success) {
     throw new ApiError(400, `Invalid ${label}`, "bad_request");
@@ -145,5 +153,5 @@ export type EventInput = z.infer<typeof createEventSchema>;
 // ─── Check-in ────────────────────────────────────────────────────────────────
 
 export const checkinSchema = z.strictObject({
-  checkinCode: z.uuid(),
+  checkinCode: z.string().regex(UUID_RE, "Invalid UUID"),
 });

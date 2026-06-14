@@ -23,11 +23,11 @@ export function jsonError(status: number, message: string, code = "error") {
  *
  * Supabase/PostgREST exposes a structured error with `code === "23505"` and the
  * constraint name in `message`/`details` (e.g. `users_email_key`,
- * `users_line_id_key`, `checkins_event_id_user_id_key`). We key off the code
+ * `users_line_uid_key`, `checkins_event_id_user_id_key`). We key off the code
  * first, with a defensive text fallback for errors that arrive less structured.
  *
  * @param constraintHint substring of the constraint name to disambiguate
- *   which unique index failed, e.g. "line_id", "email", "event_id".
+ *   which unique index failed, e.g. "line_uid", "email", "event_id".
  */
 export function isUniqueViolation(
   err: unknown,

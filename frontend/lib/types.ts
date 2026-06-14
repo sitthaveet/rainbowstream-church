@@ -36,7 +36,7 @@ export type IdentityOrientation =
 /** A full user row (profile fields are null until registration). */
 export interface User {
   id: string;
-  lineId: string;
+  lineUid: string;
   firstName: string | null;
   lastName: string | null;
   nickname: string | null;

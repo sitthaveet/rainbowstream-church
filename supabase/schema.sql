@@ -41,7 +41,7 @@ create table users (
   -- LINE identity: the LIFF userId (sub), known at first login. The only field
   -- populated when an account is auto-created; the rest is filled in later via
   -- the registration form.
-  line_id                     varchar(100) not null unique,
+  line_uid                    varchar(100) not null unique,
 
   -- Profile fields below are NULL until the user completes registration.
 

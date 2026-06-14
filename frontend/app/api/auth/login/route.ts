@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByLineId, createUser } from "@/lib/db";
+import { getUserByLineUid, createUser } from "@/lib/db";
 import { handleRoute, parseBody, isUniqueViolation } from "@/lib/api";
 import { loginSchema } from "@/lib/validation";
 import { verifyLineIdToken } from "@/lib/line";
@@ -14,24 +14,24 @@ export const runtime = "nodejs";
  */
 export const POST = handleRoute(async (req: NextRequest) => {
   const { idToken } = await parseBody(req, loginSchema);
-  const { sub: lineId } = await verifyLineIdToken(idToken);
+  const { sub: lineUid } = await verifyLineIdToken(idToken);
 
   // Resolve, or auto-create on first login.
-  let user = await getUserByLineId(lineId);
+  let user = await getUserByLineUid(lineUid);
   if (!user) {
     try {
-      user = await createUser(lineId);
+      user = await createUser(lineUid);
     } catch (err) {
       // Concurrent first-login: LIFF init can double-fire, so a second
-      // createUser hits the line_id UNIQUE constraint. Fall back to the row
+      // createUser hits the line_uid UNIQUE constraint. Fall back to the row
       // the winning request just inserted.
-      if (!isUniqueViolation(err, "line_id")) throw err;
-      user = await getUserByLineId(lineId);
+      if (!isUniqueViolation(err, "line_uid")) throw err;
+      user = await getUserByLineUid(lineUid);
       if (!user) throw err;
     }
   }
 
-  await setSessionCookie({ userId: user.id, lineId });
+  await setSessionCookie({ userId: user.id, lineUid });
 
   return NextResponse.json({ user, registered: user.firstName != null });
 });

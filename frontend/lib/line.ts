@@ -2,7 +2,7 @@ import { ApiError } from "./api";
 
 export interface LineIdTokenPayload {
   iss: string;
-  sub: string; // LINE userId — maps to users.line_id
+  sub: string; // LINE userId — maps to users.line_uid
   aud: string;
   exp: number;
   name?: string;

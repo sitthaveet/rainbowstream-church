@@ -44,7 +44,7 @@ This project is a web-based for Rainbow Stream church management. It's very simp
   and the `check_in()` function for atomic check-in + points).
 - **First pastor bootstrap**: role changes require an existing pastor, so promote the founding
   pastor manually in the Supabase SQL editor:
-  `update users set role = 'pastor' where line_id = '<LINE userId>';`
+  `update users set role = 'pastor' where line_uid = '<LINE userId>';`
   Everyone after that can be promoted in the app (จัดการสมาชิก).
 - **Local dev**: `cd frontend && npm run dev` (Supabase is hosted; no local DB emulator).
 

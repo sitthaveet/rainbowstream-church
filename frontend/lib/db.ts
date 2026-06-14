@@ -27,7 +27,7 @@ import type {
 // ─── Column lists ────────────────────────────────────────────────────────────
 
 const USER_COLS =
-  "id, line_id, first_name, last_name, nickname, birthdate, email, " +
+  "id, line_uid, first_name, last_name, nickname, birthdate, email, " +
   "phone_number, address, sex_at_birth, identity_orientation, " +
   "identity_orientation_other, christian_duration, church, " +
   "self_introduction, points, role, created_at, updated_at";
@@ -52,7 +52,7 @@ const EVENT_BY_CODE_COLS =
 function toUser(r: any): User {
   return {
     id: r.id,
-    lineId: r.line_id,
+    lineUid: r.line_uid,
     firstName: r.first_name,
     lastName: r.last_name,
     nickname: r.nickname,
@@ -167,11 +167,11 @@ function profileToRow(f: ProfileFields) {
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
-export async function getUserByLineId(lineId: string): Promise<User | null> {
+export async function getUserByLineUid(lineUid: string): Promise<User | null> {
   const { data, error } = await supabase
     .from("users")
     .select(USER_COLS)
-    .eq("line_id", lineId)
+    .eq("line_uid", lineUid)
     .maybeSingle();
   if (error) throw error;
   return data ? toUser(data) : null;
@@ -196,11 +196,11 @@ export async function listUsers(): Promise<MemberSummary[]> {
   return (data ?? []).map(toMemberSummary);
 }
 
-/** Auto-creates an account on first LINE login (only line_id is known). */
-export async function createUser(lineId: string): Promise<User> {
+/** Auto-creates an account on first LINE login (only line_uid is known). */
+export async function createUser(lineUid: string): Promise<User> {
   const { data, error } = await supabase
     .from("users")
-    .insert({ line_id: lineId })
+    .insert({ line_uid: lineUid })
     .select(USER_COLS)
     .single();
   if (error) throw error;

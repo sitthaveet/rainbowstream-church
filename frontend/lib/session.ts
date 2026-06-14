@@ -8,7 +8,7 @@ const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
  *  is loaded fresh from the DB per request so changes take effect immediately. */
 export interface SessionPayload {
   userId: string;
-  lineId: string;
+  lineUid: string;
 }
 
 function secret(): Uint8Array {
@@ -18,7 +18,7 @@ function secret(): Uint8Array {
 }
 
 async function signSession(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ userId: payload.userId, lineId: payload.lineId })
+  return new SignJWT({ userId: payload.userId, lineUid: payload.lineUid })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
@@ -30,9 +30,9 @@ async function verifySession(token: string): Promise<SessionPayload | null> {
     const { payload } = await jwtVerify(token, secret());
     if (
       typeof payload.userId === "string" &&
-      typeof payload.lineId === "string"
+      typeof payload.lineUid === "string"
     ) {
-      return { userId: payload.userId, lineId: payload.lineId };
+      return { userId: payload.userId, lineUid: payload.lineUid };
     }
     return null;
   } catch {

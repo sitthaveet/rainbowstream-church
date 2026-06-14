@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listUserCheckins } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
 import { handleRoute } from "@/lib/api";
 import { requireSelfOrPastor } from "@/lib/auth";
 import { assertUuid } from "@/lib/validation";
@@ -15,6 +14,6 @@ export const GET = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
   assertUuid(id, "user id");
   await requireSelfOrPastor(id);
 
-  const { data } = await listUserCheckins(dc, { userId: id });
-  return NextResponse.json({ checkins: data.checkins });
+  const checkins = await listUserCheckins(id);
+  return NextResponse.json({ checkins });
 });

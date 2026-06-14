@@ -19,15 +19,12 @@ export function jsonError(status: number, message: string, code = "error") {
 }
 
 /**
- * Detects a Postgres unique-constraint violation surfaced through the
- * Data Connect Web SDK.
+ * Detects a Postgres unique-constraint violation surfaced through Supabase.
  *
- * SPIKE NOTE (see plan issue #2): the Web SDK does not expose a clean
- * SQLSTATE 23505 — it throws a `DataConnectError` whose message carries the
- * Postgres text. This matcher is written defensively against the usual
- * wording. Before relying on the 409 paths in production, trigger a duplicate
- * check-in and a duplicate email against the emulator, log the raw error, and
- * confirm the substrings below (and the constraint names) match reality.
+ * Supabase/PostgREST exposes a structured error with `code === "23505"` and the
+ * constraint name in `message`/`details` (e.g. `users_email_key`,
+ * `users_line_id_key`, `checkins_event_id_user_id_key`). We key off the code
+ * first, with a defensive text fallback for errors that arrive less structured.
  *
  * @param constraintHint substring of the constraint name to disambiguate
  *   which unique index failed, e.g. "line_id", "email", "event_id".
@@ -36,8 +33,10 @@ export function isUniqueViolation(
   err: unknown,
   constraintHint?: string,
 ): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
   const msg = errorText(err).toLowerCase();
   const looksUnique =
+    code === "23505" ||
     msg.includes("duplicate key") ||
     msg.includes("unique constraint") ||
     msg.includes("23505") ||
@@ -47,11 +46,10 @@ export function isUniqueViolation(
 }
 
 /**
- * Flattens an error into one searchable string, collecting `message`/`code`
- * from the error and any nested GraphQL / Data Connect shapes (`errors[]`,
- * `response`, `cause`, `extensions`). The unique-violation text can surface in
- * any of these depending on SDK/transport, so all are searched rather than
- * relying on `err.message` alone.
+ * Flattens an error into one searchable string, collecting `message`/`code`/
+ * `details`/`hint` from the error and any nested wrapper (`response`, `cause`).
+ * A PostgREST unique violation spreads the constraint name and detail across
+ * these fields, so all are searched rather than relying on `err.message` alone.
  */
 function errorText(err: unknown): string {
   const parts: string[] = [];
@@ -67,10 +65,10 @@ function errorText(err: unknown): string {
     const o = e as Record<string, unknown>;
     if (typeof o.message === "string") parts.push(o.message);
     if (typeof o.code === "string") parts.push(o.code);
-    if (Array.isArray(o.errors)) o.errors.forEach((x) => visit(x, depth + 1));
+    if (typeof o.details === "string") parts.push(o.details);
+    if (typeof o.hint === "string") parts.push(o.hint);
     visit(o.response, depth + 1);
     visit(o.cause, depth + 1);
-    visit(o.extensions, depth + 1);
   };
   visit(err, 0);
   return parts.length ? parts.join(" ") : String(err);

@@ -9,9 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@dataconnect/generated": "file:src/dataconnect-generated",
     "@line/liff": "2.29.0",
-    "firebase": "^12.13.0",
+    "@supabase/supabase-js": "^2.45.0",
     "jose": "^6.2.3",
     "motion": "^12.40.0",
     "next": "16.2.6",

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createEvent, UserRole } from "@dataconnect/generated";
-import { listEvents, getEventById } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
+import { listEvents, createEvent } from "@/lib/db";
+import { UserRole } from "@/lib/types";
 import { handleRoute, parseBody } from "@/lib/api";
 import { requireAuth, requirePastor } from "@/lib/auth";
 import { createEventSchema } from "@/lib/validation";
@@ -15,12 +14,11 @@ export const runtime = "nodejs";
  */
 export const GET = handleRoute(async () => {
   const caller = await requireAuth();
-  const { data } = await listEvents(dc);
-  const events =
-    caller.role === UserRole.pastor
-      ? data.events
-      : data.events.map(stripCheckinCode);
-  return NextResponse.json({ events });
+  const events = await listEvents();
+  return NextResponse.json({
+    events:
+      caller.role === UserRole.pastor ? events : events.map(stripCheckinCode),
+  });
 });
 
 /** POST /api/events — create an event (pastor only). */
@@ -28,7 +26,7 @@ export const POST = handleRoute(async (req: NextRequest) => {
   const pastor = await requirePastor();
   const body = await parseBody(req, createEventSchema);
 
-  const created = await createEvent(dc, {
+  const event = await createEvent({
     title: body.title,
     description: body.description,
     location: body.location,
@@ -37,6 +35,5 @@ export const POST = handleRoute(async (req: NextRequest) => {
     createdById: pastor.id, // from the session — never the request body
   });
 
-  const { data } = await getEventById(dc, { id: created.data.event_insert.id });
-  return NextResponse.json({ event: data.event }, { status: 201 });
+  return NextResponse.json({ event }, { status: 201 });
 });

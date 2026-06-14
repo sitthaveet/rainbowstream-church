@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEventByCheckinCode } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
 import { ApiError, handleRoute } from "@/lib/api";
 import { requireAuth } from "@/lib/auth";
 import { assertUuid } from "@/lib/validation";
@@ -19,8 +18,7 @@ export const GET = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
   assertUuid(code, "check-in code");
   await requireAuth();
 
-  const { data } = await getEventByCheckinCode(dc, { checkinCode: code });
-  const event = data.events[0];
+  const event = await getEventByCheckinCode(code);
   if (!event) {
     throw new ApiError(404, "Invalid check-in code", "not_found");
   }

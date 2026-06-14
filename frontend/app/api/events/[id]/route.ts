@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateEvent, deleteEvent, UserRole } from "@dataconnect/generated";
-import { getEventById } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
+import { getEventById, updateEvent, deleteEvent } from "@/lib/db";
+import { UserRole } from "@/lib/types";
 import { ApiError, handleRoute, parseBody } from "@/lib/api";
 import { requireAuth, requirePastor } from "@/lib/auth";
 import { updateEventSchema, assertUuid } from "@/lib/validation";
@@ -17,14 +16,12 @@ export const GET = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
   assertUuid(id, "event id");
   const caller = await requireAuth();
 
-  const { data } = await getEventById(dc, { id });
-  if (!data.event) throw new ApiError(404, "Event not found", "not_found");
+  const event = await getEventById(id);
+  if (!event) throw new ApiError(404, "Event not found", "not_found");
 
-  const event =
-    caller.role === UserRole.pastor
-      ? data.event
-      : stripCheckinCode(data.event);
-  return NextResponse.json({ event });
+  return NextResponse.json({
+    event: caller.role === UserRole.pastor ? event : stripCheckinCode(event),
+  });
 });
 
 /**
@@ -38,20 +35,17 @@ export const PATCH = handleRoute(async (req: NextRequest, ctx: Ctx) => {
   await requirePastor();
   const body = await parseBody(req, updateEventSchema);
 
-  const res = await updateEvent(dc, {
-    id,
+  const event = await updateEvent(id, {
     title: body.title,
     description: body.description,
     location: body.location,
     startsAt: body.startsAt,
     endsAt: body.endsAt,
   });
-  if (!res.data.event_update) {
+  if (!event) {
     throw new ApiError(404, "Event not found", "not_found");
   }
-
-  const { data } = await getEventById(dc, { id });
-  return NextResponse.json({ event: data.event });
+  return NextResponse.json({ event });
 });
 
 /** DELETE /api/events/[id] — delete an event (pastor only). Checkins cascade. */
@@ -60,8 +54,8 @@ export const DELETE = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
   assertUuid(id, "event id");
   await requirePastor();
 
-  const res = await deleteEvent(dc, { id });
-  if (!res.data.event_delete) {
+  const deleted = await deleteEvent(id);
+  if (!deleted) {
     throw new ApiError(404, "Event not found", "not_found");
   }
   return NextResponse.json({ ok: true });

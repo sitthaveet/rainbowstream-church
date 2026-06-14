@@ -1,9 +1,0 @@
-connectorId: church
-generate:
-  javascriptSdk:
-    - outputDir: ../../frontend/src/dataconnect-generated
-      package: "@dataconnect/generated"
-      packageJsonDir: ../../frontend
-      react: true
-      angular: false
-      clientCache: {}

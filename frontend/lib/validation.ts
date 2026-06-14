@@ -1,12 +1,8 @@
 import { z } from "zod";
-import {
-  SexAtBirth,
-  IdentityOrientation,
-  UserRole,
-} from "@dataconnect/generated";
+import { SexAtBirth, IdentityOrientation, UserRole } from "@/lib/types";
 import { ApiError } from "./api";
 
-/** A loose ISO date-time / timestamp string accepted by Data Connect. */
+/** A loose ISO date-time / timestamp string accepted by the API. */
 const timestamp = z
   .string()
   .min(1)

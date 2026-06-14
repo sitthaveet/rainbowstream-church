@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkIn } from "@dataconnect/generated";
-import { getEventByCheckinCode } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
+import { getEventByCheckinCode, checkInUser } from "@/lib/db";
 import { ApiError, handleRoute, parseBody, isUniqueViolation } from "@/lib/api";
 import { requireAuth } from "@/lib/auth";
 import { checkinSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
+// Response-only; the actual award lives in the `check_in` SQL function. Keep in sync.
 const POINTS_PER_CHECKIN = 10;
 
 /**
@@ -15,23 +14,22 @@ const POINTS_PER_CHECKIN = 10;
  *
  * The body carries the scanned QR `checkinCode`, never a raw `eventId`:
  * otherwise anyone knowing an event UUID could check in without attending.
- * `CheckIn` is a @transaction that awards 10 points atomically; a repeat
- * check-in trips the UNIQUE(event_id, user_id) constraint → 409.
+ * `checkInUser` calls the `check_in` Postgres function, which awards 10 points
+ * atomically; a repeat check-in trips the UNIQUE(event_id, user_id) → 409.
  */
 export const POST = handleRoute(async (req: NextRequest) => {
   const user = await requireAuth();
   const { checkinCode } = await parseBody(req, checkinSchema);
 
-  const resolved = await getEventByCheckinCode(dc, { checkinCode });
-  const event = resolved.data.events[0];
+  const event = await getEventByCheckinCode(checkinCode);
   if (!event) {
     throw new ApiError(404, "Invalid check-in code", "not_found");
   }
 
   let checkinId: string;
   try {
-    const res = await checkIn(dc, { eventId: event.id, userId: user.id });
-    checkinId = res.data.checkin_insert.id;
+    const res = await checkInUser(event.id, user.id);
+    checkinId = res.id;
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw new ApiError(

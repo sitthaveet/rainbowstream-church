@@ -1,57 +1,42 @@
 /**
  * Client-side API helper — the browser's only doorway to the route handlers.
  *
- * Types are derived from the generated Data Connect SDK with `import type`
- * only: importing runtime values would pull firebase/data-connect into the
- * client bundle, and the route JSON carries plain strings anyway, so enum
- * fields are widened to string-literal unions here.
+ * Types are derived from the domain types in `@/lib/types` with `import type`
+ * only. The route JSON carries plain strings, and the events endpoints strip
+ * `checkinCode` for non-pastors, so the list/detail event types widen it back
+ * to optional here.
  */
 import type {
-  GetUserByIdData,
-  GetEventByIdData,
-  GetEventByCheckinCodeData,
-  ListEventsData,
-  ListUsersData,
-  ListUserCheckinsData,
-  ListEventCheckinsData,
-} from "@dataconnect/generated";
+  User,
+  UserRole,
+  SexAtBirth,
+  IdentityOrientation,
+  EventSummary as EventSummaryRow,
+  EventDetail as EventDetailRow,
+  EventByCode,
+  MemberSummary,
+  UserCheckin,
+  EventCheckin,
+} from "@/lib/types";
 
-export type Role = "pastor" | "member";
-export type SexAtBirthValue = "male" | "female" | "intersex";
-export type OrientationValue =
-  | "gay_lesbian"
-  | "bisexual"
-  | "straight"
-  | "transgender"
-  | "other";
+// Browser-facing names for the domain enums. Aliased (not re-typed) so they
+// can't drift from lib/types.ts; the route JSON carries them as plain strings.
+export type Role = UserRole;
+export type SexAtBirthValue = SexAtBirth;
+export type OrientationValue = IdentityOrientation;
 
-type GeneratedUser = NonNullable<GetUserByIdData["user"]>;
-
-export type ApiUser = Omit<
-  GeneratedUser,
-  "role" | "sexAtBirth" | "identityOrientation"
-> & {
-  role: Role;
-  sexAtBirth?: SexAtBirthValue | null;
-  identityOrientation?: OrientationValue | null;
-};
+/** The user as serialized to the browser (enums are already string unions). */
+export type ApiUser = User;
 
 /** Events from list/detail endpoints: `checkinCode` is stripped for members. */
-export type EventSummary = Omit<
-  ListEventsData["events"][number],
-  "checkinCode"
-> & { checkinCode?: string };
-export type EventDetail = Omit<
-  NonNullable<GetEventByIdData["event"]>,
-  "checkinCode"
-> & { checkinCode?: string };
-export type EventByCode = GetEventByCheckinCodeData["events"][number];
-
-export type MemberSummary = Omit<ListUsersData["users"][number], "role"> & {
-  role: Role;
+export type EventSummary = Omit<EventSummaryRow, "checkinCode"> & {
+  checkinCode?: string;
 };
-export type UserCheckin = ListUserCheckinsData["checkins"][number];
-export type EventCheckin = ListEventCheckinsData["checkins"][number];
+export type EventDetail = Omit<EventDetailRow, "checkinCode"> & {
+  checkinCode?: string;
+};
+
+export type { EventByCode, MemberSummary, UserCheckin, EventCheckin };
 
 /** Mirrors the server's profileSchema (lib/validation.ts) — all optional. */
 export interface ProfilePatch {

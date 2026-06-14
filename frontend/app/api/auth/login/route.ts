@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser } from "@dataconnect/generated";
-import { getUserByLineId, getUserById } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
-import { ApiError, handleRoute, parseBody, isUniqueViolation } from "@/lib/api";
+import { getUserByLineId, createUser } from "@/lib/db";
+import { handleRoute, parseBody, isUniqueViolation } from "@/lib/api";
 import { loginSchema } from "@/lib/validation";
 import { verifyLineIdToken } from "@/lib/line";
 import { setSessionCookie } from "@/lib/session";
@@ -19,30 +17,19 @@ export const POST = handleRoute(async (req: NextRequest) => {
   const { sub: lineId } = await verifyLineIdToken(idToken);
 
   // Resolve, or auto-create on first login.
-  let userId: string;
-  const existing = await getUserByLineId(dc, { lineId });
-  if (existing.data.users.length > 0) {
-    userId = existing.data.users[0].id;
-  } else {
+  let user = await getUserByLineId(lineId);
+  if (!user) {
     try {
-      const created = await createUser(dc, { lineId });
-      userId = created.data.user_insert.id;
+      user = await createUser(lineId);
     } catch (err) {
       // Concurrent first-login: LIFF init can double-fire, so a second
       // createUser hits the line_id UNIQUE constraint. Fall back to the row
       // the winning request just inserted.
       if (!isUniqueViolation(err, "line_id")) throw err;
-      const retry = await getUserByLineId(dc, { lineId });
-      const row = retry.data.users[0];
-      if (!row) throw err;
-      userId = row.id;
+      user = await getUserByLineId(lineId);
+      if (!user) throw err;
     }
   }
-
-  // createUser returns only { id } — fetch the full user for the response.
-  const { data } = await getUserById(dc, { id: userId });
-  const user = data.user;
-  if (!user) throw new ApiError(500, "User not found after login");
 
   await setSessionCookie({ userId: user.id, lineId });
 

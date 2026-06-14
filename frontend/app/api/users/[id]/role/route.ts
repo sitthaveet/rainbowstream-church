@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateUserRole, UserRole } from "@dataconnect/generated";
-import { getUserById, listUsers } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
+import { getUserById, updateUserRole, countPastors } from "@/lib/db";
+import { UserRole } from "@/lib/types";
 import { ApiError, handleRoute, parseBody } from "@/lib/api";
 import { requirePastor } from "@/lib/auth";
 import { updateRoleSchema, assertUuid } from "@/lib/validation";
@@ -17,25 +16,21 @@ export const PATCH = handleRoute(async (req: NextRequest, ctx: Ctx) => {
   await requirePastor();
   const { role } = await parseBody(req, updateRoleSchema);
 
-  const target = await getUserById(dc, { id });
-  if (!target.data.user) {
+  const target = await getUserById(id);
+  if (!target) {
     throw new ApiError(404, "User not found", "not_found");
   }
 
   // Demoting a pastor must leave at least one. TOCTOU-racy — acceptable here.
-  if (target.data.user.role === UserRole.pastor && role === UserRole.member) {
-    const { data } = await listUsers(dc);
-    const pastors = data.users.filter((u) => u.role === UserRole.pastor);
-    if (pastors.length <= 1) {
+  if (target.role === UserRole.pastor && role === UserRole.member) {
+    if ((await countPastors()) <= 1) {
       throw new ApiError(409, "At least one pastor must remain", "conflict");
     }
   }
 
-  const res = await updateUserRole(dc, { id, role });
-  if (!res.data.user_update) {
+  const updated = await updateUserRole(id, role);
+  if (!updated) {
     throw new ApiError(404, "User not found", "not_found");
   }
-
-  const after = await getUserById(dc, { id });
-  return NextResponse.json({ user: after.data.user });
+  return NextResponse.json({ user: updated });
 });

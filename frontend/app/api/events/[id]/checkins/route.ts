@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEventById, listEventCheckins } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
 import { ApiError, handleRoute } from "@/lib/api";
 import { requirePastor } from "@/lib/auth";
 import { assertUuid } from "@/lib/validation";
@@ -15,11 +14,11 @@ export const GET = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
   assertUuid(id, "event id");
   await requirePastor();
 
-  const event = await getEventById(dc, { id });
-  if (!event.data.event) {
+  const event = await getEventById(id);
+  if (!event) {
     throw new ApiError(404, "Event not found", "not_found");
   }
 
-  const { data } = await listEventCheckins(dc, { eventId: id });
-  return NextResponse.json({ checkins: data.checkins });
+  const checkins = await listEventCheckins(id);
+  return NextResponse.json({ checkins });
 });

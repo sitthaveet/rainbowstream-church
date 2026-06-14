@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getUserById,
   updateUserProfile,
   deleteUser,
-  type UpdateUserProfileVariables,
-} from "@dataconnect/generated";
-import { getUserById, listUsers } from "@/lib/db";
-import { dc } from "@/lib/dataconnect";
+  countPastors,
+} from "@/lib/db";
+import type { ProfileFields } from "@/lib/types";
 import { ApiError, handleRoute, parseBody, isUniqueViolation } from "@/lib/api";
 import { requireSelfOrPastor, requirePastor } from "@/lib/auth";
 import {
@@ -24,17 +24,18 @@ export const GET = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
   assertUuid(id, "user id");
   await requireSelfOrPastor(id);
 
-  const { data } = await getUserById(dc, { id });
-  if (!data.user) throw new ApiError(404, "User not found", "not_found");
-  return NextResponse.json({ user: data.user });
+  const user = await getUserById(id);
+  if (!user) throw new ApiError(404, "User not found", "not_found");
+  return NextResponse.json({ user });
 });
 
 /**
  * PATCH /api/users/[id] — registration-form submit or profile edit.
  *
- * `UpdateUserProfile` is a full-row replacement: an omitted nullable variable
- * is written as NULL. So this does a read-modify-write — fetch the row, merge
- * the incoming fields, and send the complete object (plan issue #1).
+ * The profile write is a full-row replacement, so this does a read-modify-write:
+ * fetch the row, merge the incoming fields (`??` keeps a real `christianDuration:
+ * 0`), and send the complete object. The merged row is validated for identity
+ * consistency before the write, and the write returns the updated row directly.
  */
 export const PATCH = handleRoute(async (req: NextRequest, ctx: Ctx) => {
   const { id } = await ctx.params;
@@ -42,12 +43,10 @@ export const PATCH = handleRoute(async (req: NextRequest, ctx: Ctx) => {
   await requireSelfOrPastor(id);
   const patch = await parseBody(req, profileSchema);
 
-  const before = await getUserById(dc, { id });
-  const existing = before.data.user;
+  const existing = await getUserById(id);
   if (!existing) throw new ApiError(404, "User not found", "not_found");
 
-  const merged: UpdateUserProfileVariables = {
-    id,
+  const merged: ProfileFields = {
     firstName: patch.firstName ?? existing.firstName,
     lastName: patch.lastName ?? existing.lastName,
     nickname: patch.nickname ?? existing.nickname,
@@ -60,27 +59,22 @@ export const PATCH = handleRoute(async (req: NextRequest, ctx: Ctx) => {
       patch.identityOrientation ?? existing.identityOrientation,
     identityOrientationOther:
       patch.identityOrientationOther ?? existing.identityOrientationOther,
-    christianDuration:
-      patch.christianDuration ?? existing.christianDuration,
+    christianDuration: patch.christianDuration ?? existing.christianDuration,
     church: patch.church ?? existing.church,
     selfIntroduction: patch.selfIntroduction ?? existing.selfIntroduction,
   };
   assertIdentityConsistency(merged);
 
   try {
-    const res = await updateUserProfile(dc, merged);
-    if (!res.data.user_update) {
-      throw new ApiError(404, "User not found", "not_found");
-    }
+    const updated = await updateUserProfile(id, merged);
+    if (!updated) throw new ApiError(404, "User not found", "not_found");
+    return NextResponse.json({ user: updated });
   } catch (err) {
     if (isUniqueViolation(err, "email")) {
       throw new ApiError(409, "Email is already in use", "conflict");
     }
     throw err;
   }
-
-  const after = await getUserById(dc, { id });
-  return NextResponse.json({ user: after.data.user });
 });
 
 /** DELETE /api/users/[id] — remove a member (pastor only). */
@@ -92,21 +86,19 @@ export const DELETE = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
     throw new ApiError(409, "You cannot delete your own account", "conflict");
   }
 
-  const target = await getUserById(dc, { id });
-  if (!target.data.user) {
+  const target = await getUserById(id);
+  if (!target) {
     throw new ApiError(404, "User not found", "not_found");
   }
   // Keep at least one pastor. TOCTOU-racy — acceptable for a single church.
-  if (target.data.user.role === "pastor") {
-    const { data } = await listUsers(dc);
-    const pastors = data.users.filter((u) => u.role === "pastor");
-    if (pastors.length <= 1) {
+  if (target.role === "pastor") {
+    if ((await countPastors()) <= 1) {
       throw new ApiError(409, "Cannot delete the last pastor", "conflict");
     }
   }
 
-  const res = await deleteUser(dc, { id });
-  if (!res.data.user_delete) {
+  const deleted = await deleteUser(id);
+  if (!deleted) {
     throw new ApiError(404, "User not found", "not_found");
   }
   return NextResponse.json({ ok: true });

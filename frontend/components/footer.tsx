@@ -6,8 +6,7 @@ export function Footer() {
       <div className="flex flex-col items-center gap-2 py-8 text-center">
         <p className="font-display text-lg text-headings">Rainbow Stream</p>
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>หลั่งไหลด้วยรักตั้งแต่ปี 2022</span>
-          <span aria-hidden>🏳️‍🌈</span>
+          <span>since 2022</span>
         </p>
       </div>
     </footer>

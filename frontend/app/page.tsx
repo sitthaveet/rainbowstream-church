@@ -97,11 +97,6 @@ function HomeContent() {
       {/* ── Prism points medallion (the signature) ─────────────────── */}
       <motion.section variants={item} className="flex flex-col items-center">
         <PrismMedallion points={user!.points} />
-        <p className="mt-5 text-sm text-muted-foreground">
-          ทุกการเช็คอินรับ{" "}
-          <span className="font-sans font-semibold text-headings">10 แต้ม</span>{" "}
-          ✨
-        </p>
       </motion.section>
 
       {/* ── Upcoming events ────────────────────────────────────────── */}

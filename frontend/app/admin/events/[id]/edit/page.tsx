@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { RequirePastor } from "@/components/guard";
 import { EventForm } from "@/components/event-form";
 import { Callout } from "@/components/ui/callout";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSpinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/use-api";
 import { getEvent, updateEvent, errorMessage } from "@/lib/client";
@@ -33,9 +34,7 @@ function EditEventContent({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <section className="text-center">
-        <h1 className="text-3xl">แก้ไขกิจกรรม</h1>
-      </section>
+      <PageHeader eyebrow="ศิษยาภิบาล" title="แก้ไขกิจกรรม" />
 
       <EventForm
         initial={data.event}

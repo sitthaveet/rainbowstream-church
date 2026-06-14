@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion, type Variants } from "motion/react";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthBoundary } from "@/components/guard";
 import { Card } from "@/components/ui/card";
@@ -20,6 +21,19 @@ const TODAY_START_MS = (() => {
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 })();
+
+const container: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
+};
+const item: Variants = {
+  hidden: { opacity: 0, y: 18 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+  },
+};
 
 export default function HomePage() {
   return (
@@ -43,33 +57,56 @@ function HomeContent() {
   const isPastor = user!.role === "pastor";
 
   return (
-    <div className="space-y-8">
-      <section className="text-center">
-        <h1 className="text-4xl">สวัสดี {displayName} 👋</h1>
-        <p className="mt-2 text-muted-foreground">
-          ยินดีต้อนรับสู่ครอบครัว Rainbow Stream
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="space-y-12"
+    >
+      {/* ── Hero ───────────────────────────────────────────────────── */}
+      <motion.section variants={item} className="pt-2 text-center">
+        <p className="text-brand font-sans text-sm font-medium">ยินดีต้อนรับ</p>
+        <h1 className="mt-1 text-4xl leading-tight">
+          สวัสดี{" "}
+          <span className="text-spectrum animate-spectrum-flow">
+            {displayName}
+          </span>{" "}
+          👋
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          ดีใจที่ได้เจอคุณอีกครั้งในวันนี้ 💗
         </p>
-      </section>
+      </motion.section>
 
       {!registered && (
-        <Callout variant="accent" leading={<span>📝</span>}>
-          <p className="font-sans">ลงทะเบียนสมาชิกให้เสร็จก่อนเช็คอินกิจกรรม</p>
-          <Link href="/register" className="mt-1 inline-block text-link underline decoration-link-underline decoration-2 underline-offset-4 hover:text-link-hover">
-            ไปกรอกข้อมูล →
-          </Link>
-        </Callout>
+        <motion.div variants={item}>
+          <Callout variant="accent" leading={<span>📝</span>}>
+            <p className="font-sans font-medium">
+              ลงทะเบียนสมาชิกให้เสร็จก่อนเช็คอินกิจกรรม
+            </p>
+            <Link
+              href="/register"
+              className="mt-1 inline-block text-link underline decoration-link-underline decoration-2 underline-offset-4 hover:text-link-hover"
+            >
+              ไปกรอกข้อมูล →
+            </Link>
+          </Callout>
+        </motion.div>
       )}
 
-      <section>
-        <Callout variant="accent" className="text-center">
-          <p className="font-sans text-sm">แต้มสะสมของฉัน</p>
-          <p className="font-sans text-5xl text-headings">{user!.points}</p>
-          <p className="mt-1 text-sm">เช็คอินกิจกรรมรับครั้งละ 10 แต้ม</p>
-        </Callout>
-      </section>
+      {/* ── Prism points medallion (the signature) ─────────────────── */}
+      <motion.section variants={item} className="flex flex-col items-center">
+        <PrismMedallion points={user!.points} />
+        <p className="mt-5 text-sm text-muted-foreground">
+          ทุกการเช็คอินรับ{" "}
+          <span className="font-sans font-semibold text-headings">10 แต้ม</span>{" "}
+          ✨
+        </p>
+      </motion.section>
 
-      <section>
-        <h2 className="text-2xl">กิจกรรมที่กำลังจะมาถึง</h2>
+      {/* ── Upcoming events ────────────────────────────────────────── */}
+      <motion.section variants={item}>
+        <SectionTitle>กิจกรรมที่กำลังจะมาถึง</SectionTitle>
         <div className="mt-4 space-y-3">
           {events.isLoading ? (
             <PageSpinner />
@@ -87,12 +124,16 @@ function HomeContent() {
             ))
           )}
         </div>
-      </section>
+      </motion.section>
 
-      <section>
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-2xl">เช็คอินล่าสุด</h2>
-          <Link href="/history" className="text-sm text-link underline decoration-link-underline decoration-2 underline-offset-4 hover:text-link-hover">
+      {/* ── Recent check-ins ───────────────────────────────────────── */}
+      <motion.section variants={item}>
+        <div className="flex items-baseline justify-between gap-3">
+          <SectionTitle>เช็คอินล่าสุด</SectionTitle>
+          <Link
+            href="/history"
+            className="shrink-0 font-sans text-sm text-link underline decoration-link-underline decoration-2 underline-offset-4 hover:text-link-hover"
+          >
             ดูทั้งหมด
           </Link>
         </div>
@@ -105,48 +146,114 @@ function HomeContent() {
             </EmptyState>
           ) : (
             recent.map((c) => (
-              <Card key={c.id} className="flex items-center justify-between gap-3">
+              <Card
+                key={c.id}
+                className="flex items-center justify-between gap-3"
+              >
                 <div className="min-w-0">
-                  <p className="truncate font-sans">{c.event.title}</p>
+                  <p className="truncate font-sans font-medium">
+                    {c.event.title}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {formatThaiDateTime(c.checkedInAt)}
                   </p>
                 </div>
-                <span className="shrink-0 font-sans text-success-accent">+10</span>
+                <PointsPill />
               </Card>
             ))
           )}
         </div>
-      </section>
+      </motion.section>
 
+      {/* ── Pastor tools ───────────────────────────────────────────── */}
       {isPastor && (
-        <section>
-          <h2 className="text-2xl">สำหรับศิษยาภิบาล</h2>
+        <motion.section variants={item}>
+          <SectionTitle>สำหรับศิษยาภิบาล</SectionTitle>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <Link href="/admin/events">
-              <Card className="text-center transition-colors duration-150 hover:bg-shade">
-                <p className="text-3xl">🗓️</p>
-                <p className="mt-2 font-sans">จัดการกิจกรรม</p>
-              </Card>
-            </Link>
-            <Link href="/admin/members">
-              <Card className="text-center transition-colors duration-150 hover:bg-shade">
-                <p className="text-3xl">💗</p>
-                <p className="mt-2 font-sans">จัดการสมาชิก</p>
-              </Card>
-            </Link>
+            <ActionCard href="/admin/events" icon="🗓️" label="จัดการกิจกรรม" />
+            <ActionCard href="/admin/members" icon="💗" label="จัดการสมาชิก" />
           </div>
-        </section>
+        </motion.section>
       )}
 
-      <section>
-        <Link href="/profile">
-          <Card className="flex items-center justify-between transition-colors duration-150 hover:bg-shade">
-            <p className="font-sans">ข้อมูลของฉัน</p>
-            <span className="text-muted-foreground">→</span>
+      {/* ── Profile link ───────────────────────────────────────────── */}
+      <motion.section variants={item}>
+        <Link href="/profile" className="block">
+          <Card className="flex items-center justify-between hover:-translate-y-0.5 hover:border-decoration/40">
+            <span className="font-sans font-medium">ข้อมูลของฉัน</span>
+            <span aria-hidden className="text-decoration">→</span>
           </Card>
         </Link>
-      </section>
+      </motion.section>
+    </motion.div>
+  );
+}
+
+/** The brand's signature object: a slowly-rotating spectral ring + glow with
+ *  the member's points shimmering at its centre. */
+function PrismMedallion({ points }: { points: number }) {
+  return (
+    <div className="relative grid aspect-square w-52 place-items-center">
+      {/* rotating glow */}
+      <div
+        aria-hidden
+        className="animate-spin-slow absolute inset-2 rounded-full opacity-70 blur-2xl"
+        style={{ background: "var(--gradient-conic)" }}
+      />
+      {/* spectral ring */}
+      <div
+        className="relative grid size-44 place-items-center rounded-full p-[3px] shadow-xl shadow-primary/20"
+        style={{ background: "var(--gradient-conic)" }}
+      >
+        <div className="grid size-full place-items-center rounded-full bg-card/90 text-center backdrop-blur-md">
+          <div>
+            <p className="text-spectrum animate-spectrum-flow font-display text-6xl leading-none">
+              {points}
+            </p>
+            <p className="mt-2 font-sans text-sm text-muted-foreground">
+              แต้มสะสม
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function PointsPill() {
+  return (
+    <span className="shrink-0 rounded-full bg-success/70 px-2.5 py-1 font-sans text-sm font-semibold text-success-foreground ring-1 ring-inset ring-success-accent/20">
+      +10
+    </span>
+  );
+}
+
+function ActionCard({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: string;
+  label: string;
+}) {
+  return (
+    <Link href={href} className="block">
+      <Card className="flex flex-col items-center gap-3 py-6 text-center hover:-translate-y-0.5 hover:border-decoration/40">
+        <span className="grid size-12 place-items-center rounded-2xl bg-accent/70 text-2xl ring-1 ring-inset ring-decoration/15">
+          {icon}
+        </span>
+        <span className="font-sans font-medium">{label}</span>
+      </Card>
+    </Link>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="flex items-center gap-2.5 text-2xl">
+      <span aria-hidden className="spectral-rule h-5 w-1 rounded-full" />
+      {children}
+    </h2>
   );
 }

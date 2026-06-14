@@ -5,6 +5,7 @@ import { RequirePastor } from "@/components/guard";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSpinner } from "@/components/ui/spinner";
 import { EventCard } from "@/components/event-card";
 import { useApi } from "@/lib/use-api";
@@ -24,9 +25,7 @@ function AdminEventsContent() {
 
   return (
     <div className="space-y-6">
-      <section className="text-center">
-        <h1 className="text-3xl">จัดการกิจกรรม</h1>
-      </section>
+      <PageHeader eyebrow="ศิษยาภิบาล" title="จัดการกิจกรรม" />
 
       <Link href="/admin/events/new" className="block">
         <Button className="w-full" size="lg">

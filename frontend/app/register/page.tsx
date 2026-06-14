@@ -6,6 +6,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { AuthBoundary } from "@/components/guard";
 import { ProfileForm } from "@/components/profile-form";
 import { Callout } from "@/components/ui/callout";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSpinner } from "@/components/ui/spinner";
 
 /** Allows only same-app relative redirect targets. */
@@ -38,12 +39,9 @@ function RegisterContent() {
 
   return (
     <div className="space-y-6">
-      <section className="text-center">
-        <h1 className="text-3xl">ลงทะเบียนสมาชิก</h1>
-        <p className="mt-2 text-muted-foreground">
-          กรอกข้อมูลสั้น ๆ เพื่อให้เรารู้จักคุณมากขึ้น
-        </p>
-      </section>
+      <PageHeader eyebrow="ยินดีต้อนรับสู่ครอบครัว" title="ลงทะเบียนสมาชิก">
+        กรอกข้อมูลสั้น ๆ เพื่อให้เรารู้จักคุณมากขึ้น
+      </PageHeader>
 
       <Callout variant="accent" leading={<span>🔒</span>}>
         ข้อมูลของคุณจะถูกเก็บเป็นความลับ และเห็นได้เฉพาะศิษยาภิบาลเท่านั้น

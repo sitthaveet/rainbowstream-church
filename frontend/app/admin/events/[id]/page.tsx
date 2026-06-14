@@ -107,8 +107,13 @@ function EventDetailContent({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       <section className="text-center">
-        <h1 className="text-3xl">{event.title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-brand font-sans text-sm font-medium">กิจกรรม</p>
+        <h1 className="mt-1 text-3xl">{event.title}</h1>
+        <div
+          aria-hidden
+          className="spectral-rule mx-auto mt-3 h-0.5 w-16 rounded-full opacity-80"
+        />
+        <p className="mt-3 text-sm text-muted-foreground">
           🗓️ {formatEventRange(event.startsAt, event.endsAt)}
         </p>
         {event.location && (
@@ -121,9 +126,15 @@ function EventDetailContent({ id }: { id: string }) {
       {url && (
         <section className="space-y-3">
           <h2 className="text-center text-2xl">QR เช็คอิน</h2>
-          {/* Always-white tile so the code scans reliably in dark mode too */}
-          <div className="mx-auto w-fit rounded-xl border bg-white p-5">
-            <QRCodeSVG value={url} size={224} marginSize={1} />
+          {/* Spectral frame around an always-white tile so the code scans
+              reliably in dark mode too */}
+          <div
+            className="mx-auto w-fit rounded-2xl p-[3px] shadow-lg shadow-primary/15"
+            style={{ background: "var(--gradient-conic)" }}
+          >
+            <div className="rounded-[calc(1rem-1px)] bg-white p-5">
+              <QRCodeSVG value={url} size={224} marginSize={1} />
+            </div>
           </div>
           <p className="text-center text-sm text-muted-foreground">
             ให้ผู้ร่วมงานสแกนเพื่อเช็คอินและรับ 10 แต้ม

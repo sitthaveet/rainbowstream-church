@@ -1,9 +1,8 @@
 import { cn } from "@/lib/cn";
 
 const fieldClasses =
-  "w-full rounded-lg border border-input bg-background px-3 text-foreground " +
-  "placeholder:text-muted-foreground transition-colors duration-150 " +
-  "focus:outline-2 focus:outline-offset-1 focus:outline-ring disabled:opacity-50";
+  "ring-spectral w-full rounded-xl border border-input bg-card/50 px-3.5 text-foreground " +
+  "placeholder:text-muted-foreground transition-all duration-200 disabled:opacity-50";
 
 export function Input({
   className,
@@ -18,7 +17,7 @@ export function Textarea({
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
-      className={cn(fieldClasses, "min-h-24 py-2", className)}
+      className={cn(fieldClasses, "min-h-24 py-2.5", className)}
       {...props}
     />
   );

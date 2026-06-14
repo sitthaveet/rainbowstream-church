@@ -7,6 +7,7 @@ import { RequirePastor } from "@/components/guard";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSpinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/use-api";
 import {
@@ -116,13 +117,16 @@ function MemberDetailContent({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <section className="text-center">
-        <h1 className="text-3xl">{member.nickname || fullName}</h1>
-        <p className="mt-2 text-muted-foreground">
-          {member.role === "pastor" ? "ศิษยาภิบาล" : "สมาชิก"} ·{" "}
-          <span className="font-sans text-headings">{member.points}</span> แต้ม
-        </p>
-      </section>
+      <PageHeader
+        eyebrow={member.role === "pastor" ? "ศิษยาภิบาล" : "สมาชิก"}
+        title={member.nickname || fullName}
+      >
+        แต้มสะสม{" "}
+        <span className="font-sans font-semibold text-headings">
+          {member.points}
+        </span>{" "}
+        แต้ม
+      </PageHeader>
 
       <Card>
         <h2 className="mb-2 text-lg">ข้อมูลส่วนตัว</h2>

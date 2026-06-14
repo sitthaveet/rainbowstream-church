@@ -23,7 +23,7 @@ const RETRY_KEY = "rsc-login-retried";
 
 interface AuthContextValue {
   user: ApiUser | null;
-  /** Profile completed (server: firstName != null). */
+  /** Profile completed (server: users.registered_at is set). */
   registered: boolean;
   isLoading: boolean;
   error: string | null;

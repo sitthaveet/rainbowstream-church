@@ -26,14 +26,13 @@ function isRealCalendarDate(s: string): boolean {
 
 /**
  * Validates a UUID path param (event id, user id, check-in code). Without this,
- * a malformed id flows into a `UUID!` Data Connect variable, which the backend
- * rejects as an opaque 500; here it is a clean 400 instead.
+ * a malformed id flows straight to Postgres, which rejects it as an opaque 500;
+ * here it is a clean 400 instead.
  *
- * Data Connect *emits* UUIDs as 32-char hex without hyphens (verified against
- * the emulator), while scanned QR codes or clients may echo back either that
- * or the canonical hyphenated form. Data Connect accepts both as variables
- * (also verified), so both are valid here — z.uuid() alone would reject every
- * id the database itself produces.
+ * Both the canonical hyphenated form and a 32-char dash-less hex form are
+ * accepted: Postgres emits hyphenated UUIDs, but scanned QR codes or older
+ * clients may echo back either and Postgres parses both — so z.uuid() alone
+ * would be needlessly strict.
  */
 const UUID_RE =
   /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})$/i;
@@ -54,13 +53,12 @@ export const loginSchema = z.strictObject({
 
 /**
  * Profile fields a user may set. All optional — the route does a
- * read-modify-write merge (plan issue #1), so a partial body only touches the
- * fields it carries. `role` and `points` are intentionally absent: they are
- * not user-editable here.
+ * read-modify-write merge, so a partial body only touches the fields it
+ * carries. `role` and `points` are intentionally absent: they are not
+ * user-editable here.
  *
- * `christianDuration` is a non-negative integer to match the generated
- * Data Connect SDK (`UpdateUserProfileVariables.christianDuration: number`).
- * Enums reuse the generated enum types so values flow into the SDK unchanged.
+ * `christianDuration` is a non-negative integer (0 = not a Christian). The
+ * enums reuse the domain enum types from lib/types.ts so they can't drift.
  */
 export const profileSchema = z
   .strictObject({
@@ -116,10 +114,9 @@ export const updateRoleSchema = z.strictObject({
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 /**
- * `CreateEvent`/`UpdateEvent` write every variable into the mutation, so these
- * are full-object (PUT) shapes — `title` and `startsAt` are always required.
- * The `endsAt >= startsAt` refinement mirrors the SCHEMA.md CHECK constraint
- * so a bad range is a clean 400 rather than an opaque 500.
+ * Create/update events use full-object (PUT) shapes — `title` and `startsAt`
+ * are always required. The `endsAt >= startsAt` refinement keeps a bad range a
+ * clean 400 rather than storing an inconsistent row.
  */
 const eventFields = {
   title: z.string().min(1).max(255),

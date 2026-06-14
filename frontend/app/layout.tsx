@@ -1,22 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Kanit, Noto_Sans_Thai_Looped } from "next/font/google";
+import { Trirong, Anuphan } from "next/font/google";
 import "./globals.css";
 import { LIFFProvider } from "../providers/liff-providers";
 import { AuthProvider } from "../providers/auth-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-const kanit = Kanit({
-  weight: "400",
+// Display: an elegant high-contrast Thai+Latin serif — editorial gravitas for
+// all headings and hero moments.
+const trirong = Trirong({
+  weight: ["400", "600"],
   subsets: ["latin", "thai"],
-  variable: "--font-headings",
+  variable: "--font-trirong",
   display: "swap",
 });
 
-const notoSansThaiLooped = Noto_Sans_Thai_Looped({
-  weight: ["400", "700"],
+// Body/UI: a clean, modern loopless Thai+Latin sans — quiet and highly legible.
+const anuphan = Anuphan({
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin", "thai"],
-  variable: "--font-body",
+  variable: "--font-anuphan",
   display: "swap",
 });
 
@@ -46,12 +49,15 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body
-        className={`${kanit.variable} ${notoSansThaiLooped.variable} flex min-h-dvh flex-col font-serif antialiased`}
+        className={`${trirong.variable} ${anuphan.variable} flex min-h-dvh flex-col antialiased`}
       >
+        {/* Atmosphere: spectral aurora mesh + film grain, behind everything */}
+        <div aria-hidden className="bg-aurora" />
+        <div aria-hidden className="bg-grain" />
         <LIFFProvider>
           <AuthProvider>
             <Header />
-            <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-28 pb-12">
+            <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-28 pb-16">
               {children}
             </main>
             <Footer />

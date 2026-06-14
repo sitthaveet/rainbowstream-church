@@ -5,6 +5,7 @@ import { RequirePastor } from "@/components/guard";
 import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSpinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/use-api";
 import { listMembers, errorMessage, type MemberSummary } from "@/lib/client";
@@ -29,12 +30,9 @@ function MembersContent() {
 
   return (
     <div className="space-y-6">
-      <section className="text-center">
-        <h1 className="text-3xl">จัดการสมาชิก</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          สมาชิกทั้งหมด {members.length} คน
-        </p>
-      </section>
+      <PageHeader eyebrow="ศิษยาภิบาล" title="จัดการสมาชิก">
+        สมาชิกทั้งหมด {members.length} คน
+      </PageHeader>
 
       {isLoading ? (
         <PageSpinner />
@@ -46,15 +44,17 @@ function MembersContent() {
         <div className="space-y-3">
           {members.map((m) => (
             <Link key={m.id} href={`/admin/members/${m.id}`} className="block">
-              <Card className="flex items-center justify-between gap-3 transition-colors duration-150 hover:bg-shade">
+              <Card className="flex items-center justify-between gap-3 hover:-translate-y-0.5 hover:border-decoration/40">
                 <div className="min-w-0">
-                  <p className="truncate font-sans">{memberName(m)}</p>
+                  <p className="truncate font-sans font-medium">
+                    {memberName(m)}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {m.points} แต้ม
                   </p>
                 </div>
                 {m.role === "pastor" && (
-                  <span className="shrink-0 rounded-full bg-accent px-3 py-1 font-sans text-xs text-accent-foreground">
+                  <span className="shrink-0 rounded-full bg-accent px-3 py-1 font-sans text-xs font-medium text-accent-foreground ring-1 ring-inset ring-decoration/15">
                     ศิษยาภิบาล
                   </span>
                 )}

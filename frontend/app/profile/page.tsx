@@ -6,6 +6,7 @@ import { AuthBoundary } from "@/components/guard";
 import { ProfileForm } from "@/components/profile-form";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function ProfilePage() {
   return (
@@ -22,14 +23,14 @@ function ProfileContent() {
 
   return (
     <div className="space-y-6">
-      <section className="text-center">
-        <h1 className="text-3xl">ข้อมูลของฉัน</h1>
-        <p className="mt-2 text-muted-foreground">
-          แต้มสะสม{" "}
-          <span className="font-sans text-headings">{user!.points}</span> แต้ม
-          {user!.role === "pastor" && " · ศิษยาภิบาล"}
-        </p>
-      </section>
+      <PageHeader eyebrow="โปรไฟล์" title="ข้อมูลของฉัน">
+        แต้มสะสม{" "}
+        <span className="font-sans font-semibold text-headings">
+          {user!.points}
+        </span>{" "}
+        แต้ม
+        {user!.role === "pastor" && " · ศิษยาภิบาล"}
+      </PageHeader>
 
       {!registered && (
         <Callout variant="accent">

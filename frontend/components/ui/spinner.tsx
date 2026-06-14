@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 
+/** Inline spinner (e.g. inside buttons) — inherits currentColor. */
 export function Spinner({ className }: { className?: string }) {
   return (
     <svg
@@ -25,12 +26,29 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
+/** A spinning spectral ring, masked hollow — the page-level loading state. */
+export function SpectralRing({ className }: { className?: string }) {
+  return (
+    <div
+      role="status"
+      aria-label="กำลังโหลด"
+      className={cn("animate-spin rounded-full", className ?? "size-10")}
+      style={{
+        background: "var(--gradient-conic)",
+        WebkitMask:
+          "radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px))",
+        mask: "radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px))",
+      }}
+    />
+  );
+}
+
 /** Full-area centered spinner for page-level loading states. */
 export function PageSpinner({ label }: { label?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
-      <Spinner className="size-8 text-decoration" />
-      {label && <p className="text-sm">{label}</p>}
+    <div className="flex flex-col items-center justify-center gap-4 py-24 text-muted-foreground">
+      <SpectralRing className="size-10" />
+      {label && <p className="font-sans text-sm">{label}</p>}
     </div>
   );
 }

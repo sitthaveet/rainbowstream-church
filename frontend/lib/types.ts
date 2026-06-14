@@ -1,6 +1,6 @@
 /**
- * Domain types and enums for the app — the single source of truth now that the
- * generated Data Connect SDK is gone.
+ * Domain types and enums for the app — the single source of truth for the
+ * shapes that flow between the DB layer, route handlers, and the browser.
  *
  * Enums are runtime objects (not TS `enum`) so they double as values
  * (`IdentityOrientation.other`, `z.enum(SexAtBirth)` in lib/validation.ts) and

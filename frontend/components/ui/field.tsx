@@ -18,7 +18,7 @@ export function Field({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1.5 block font-sans text-sm text-foreground">
+      <span className="mb-1.5 block font-sans text-sm font-medium text-foreground/90">
         {label}
         {required && <span className="text-decoration"> *</span>}
       </span>

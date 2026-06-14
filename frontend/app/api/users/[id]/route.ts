@@ -66,7 +66,10 @@ export const PATCH = handleRoute(async (req: NextRequest, ctx: Ctx) => {
   assertIdentityConsistency(merged);
 
   try {
-    const updated = await updateUserProfile(id, merged);
+    // First submit (registered_at still null) marks the account as registered.
+    const updated = await updateUserProfile(id, merged, {
+      markRegistered: existing.registeredAt == null,
+    });
     if (!updated) throw new ApiError(404, "User not found", "not_found");
     return NextResponse.json({ user: updated });
   } catch (err) {

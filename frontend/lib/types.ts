@@ -52,6 +52,7 @@ export interface User {
   selfIntroduction: string | null;
   points: number;
   role: UserRole;
+  registeredAt: string | null; // set on first registration/profile submit; null = not yet registered
   createdAt: string;
   updatedAt: string;
 }

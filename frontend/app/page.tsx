@@ -12,8 +12,14 @@ import { useApi } from "@/lib/use-api";
 import { listEvents, listUserCheckins } from "@/lib/client";
 import { formatThaiDateTime } from "@/lib/format";
 
-// "Upcoming" cutoff, fixed at page load (render-time Date.now() is impure).
-const PAGE_LOAD_MS = Date.now();
+// "Upcoming" cutoff: the start of today (local midnight), fixed at page load
+// (render-time Date.now() is impure). Judging by day rather than the exact
+// moment keeps today's events listed even after their start/end time passes.
+const TODAY_START_MS = (() => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+})();
 
 export default function HomePage() {
   return (
@@ -29,7 +35,7 @@ function HomeContent() {
   const checkins = useApi(() => listUserCheckins(user!.id), [user?.id], !!user);
 
   const upcoming = (events.data?.events ?? [])
-    .filter((e) => Date.parse(e.endsAt ?? e.startsAt) >= PAGE_LOAD_MS)
+    .filter((e) => Date.parse(e.endsAt ?? e.startsAt) >= TODAY_START_MS)
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
     .slice(0, 3);
   const recent = (checkins.data?.checkins ?? []).slice(0, 3);

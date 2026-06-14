@@ -11,5 +11,5 @@ export const runtime = "nodejs";
  */
 export const GET = handleRoute(async () => {
   const user = await requireAuth();
-  return NextResponse.json({ user, registered: user.firstName != null });
+  return NextResponse.json({ user, registered: user.registeredAt != null });
 });

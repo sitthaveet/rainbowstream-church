@@ -33,5 +33,5 @@ export const POST = handleRoute(async (req: NextRequest) => {
 
   await setSessionCookie({ userId: user.id, lineUid });
 
-  return NextResponse.json({ user, registered: user.firstName != null });
+  return NextResponse.json({ user, registered: user.registeredAt != null });
 });

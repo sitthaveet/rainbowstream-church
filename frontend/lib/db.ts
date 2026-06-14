@@ -30,7 +30,7 @@ const USER_COLS =
   "id, line_uid, first_name, last_name, nickname, birthdate, email, " +
   "phone_number, address, sex_at_birth, identity_orientation, " +
   "identity_orientation_other, christian_duration, church, " +
-  "self_introduction, points, role, created_at, updated_at";
+  "self_introduction, points, role, registered_at, created_at, updated_at";
 
 const MEMBER_COLS =
   "id, first_name, last_name, nickname, email, phone_number, points, role, created_at";
@@ -68,6 +68,7 @@ function toUser(r: any): User {
     selfIntroduction: r.self_introduction,
     points: r.points,
     role: r.role,
+    registeredAt: r.registered_at,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -207,14 +208,22 @@ export async function createUser(lineUid: string): Promise<User> {
   return toUser(data);
 }
 
-/** Full-row profile write. Returns the updated row, or null if the id is gone. */
+/**
+ * Full-row profile write. Returns the updated row, or null if the id is gone.
+ * Pass `markRegistered` on the first submit to stamp `registered_at` (the flag
+ * the app keys "registered" off — see schema.sql). The caller decides, since it
+ * already holds the existing row and knows whether registered_at was unset.
+ */
 export async function updateUserProfile(
   id: string,
   fields: ProfileFields,
+  opts: { markRegistered?: boolean } = {},
 ): Promise<User | null> {
+  const row: Record<string, unknown> = profileToRow(fields);
+  if (opts.markRegistered) row.registered_at = new Date().toISOString();
   const { data, error } = await supabase
     .from("users")
-    .update(profileToRow(fields))
+    .update(row)
     .eq("id", id)
     .select(USER_COLS)
     .maybeSingle();

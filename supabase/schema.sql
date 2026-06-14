@@ -1,23 +1,38 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- Rainbow Stream Church — Supabase schema
 -- Replicates the Firebase Data Connect schema (dataconnect/schema/schema.gql).
--- Paste into the Supabase SQL Editor and run once on a fresh project.
+-- Paste into the Supabase SQL Editor and run. The whole script is idempotent —
+-- every statement is guarded (do-block enums, `if not exists`, `or replace`) so
+-- re-running it on an existing project is safe and, crucially, NEVER aborts
+-- partway: an early "type already exists" used to kill the batch before it
+-- reached check_in() at the bottom, leaving the app with a missing RPC.
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ─── Enums ──────────────────────────────────────────────────────────────────
 -- Native Postgres ENUM types, mirroring the GraphQL enums (act like a CHECK).
+-- Postgres has no `create type if not exists`, so each is wrapped in a do-block
+-- that swallows the duplicate_object error on re-run.
 
-create type user_role as enum ('pastor', 'member');
+do $$ begin
+  create type user_role as enum ('pastor', 'member');
+exception when duplicate_object then null;
+end $$;
 
-create type sex_at_birth as enum ('male', 'female', 'intersex');
+do $$ begin
+  create type sex_at_birth as enum ('male', 'female', 'intersex');
+exception when duplicate_object then null;
+end $$;
 
-create type identity_orientation as enum (
-  'gay_lesbian',
-  'bisexual',
-  'straight',
-  'transgender',
-  'other'
-);
+do $$ begin
+  create type identity_orientation as enum (
+    'gay_lesbian',
+    'bisexual',
+    'straight',
+    'transgender',
+    'other'
+  );
+exception when duplicate_object then null;
+end $$;
 
 -- ─── updated_at trigger helper ──────────────────────────────────────────────
 -- Data Connect set updated_at via `request.time` on every mutation. A trigger
@@ -35,7 +50,7 @@ $$;
 
 -- ─── users ──────────────────────────────────────────────────────────────────
 
-create table users (
+create table if not exists users (
   id                          uuid primary key default gen_random_uuid(),
 
   -- LINE identity: the LIFF userId (sub), known at first login. The only field
@@ -73,18 +88,35 @@ create table users (
   -- Access role
   role                        user_role not null default 'member',
 
+  -- Registration marker: set the first time the registration/profile form is
+  -- submitted. NULL for an auto-created (login-only) account. The app keys the
+  -- "registered" flag off this — NOT off any single profile field — because
+  -- every profile field (incl. first/last name and nickname) is optional, so a
+  -- field-presence heuristic would bounce a name-less registrant back forever.
+  registered_at               timestamptz,
+
   -- System fields
   created_at                  timestamptz not null default now(),
   updated_at                  timestamptz not null default now()
 );
 
-create trigger users_set_updated_at
+-- Backfill / add-column for projects created before registered_at existed.
+-- `create table if not exists` above leaves an existing users table untouched,
+-- so add the column here, then mark everyone who registered under the old rule
+-- (first_name populated) as already registered — otherwise they'd be sent back
+-- to the registration form after this deploy.
+alter table users add column if not exists registered_at timestamptz;
+update users
+  set registered_at = coalesce(registered_at, updated_at)
+  where first_name is not null and registered_at is null;
+
+create or replace trigger users_set_updated_at
   before update on users
   for each row execute function set_updated_at();
 
 -- ─── events ─────────────────────────────────────────────────────────────────
 
-create table events (
+create table if not exists events (
   id            uuid primary key default gen_random_uuid(),
 
   -- Event details
@@ -108,20 +140,20 @@ create table events (
   updated_at    timestamptz not null default now()
 );
 
-create trigger events_set_updated_at
+create or replace trigger events_set_updated_at
   before update on events
   for each row execute function set_updated_at();
 
 -- Postgres does NOT auto-index FK columns (unlike Data Connect). Index the FK
 -- so "events created by this pastor" lookups and SET NULL cascades stay fast.
-create index events_created_by_idx on events (created_by);
+create index if not exists events_created_by_idx on events (created_by);
 
 -- ─── checkins ───────────────────────────────────────────────────────────────
 -- An attendee can check in only once per event — enforced by the composite
 -- unique constraint on (event_id, user_id). Deleting an event OR a user
 -- cascade-deletes the related check-ins (both refs are required).
 
-create table checkins (
+create table if not exists checkins (
   id             uuid primary key default gen_random_uuid(),
 
   event_id       uuid not null references events (id) on delete cascade,
@@ -135,7 +167,7 @@ create table checkins (
 -- The composite unique index covers (event_id) and (event_id, user_id) lookups.
 -- Add a standalone index on user_id for "my check-in history" queries and for
 -- the ON DELETE CASCADE when a user is removed.
-create index checkins_user_id_idx on checkins (user_id);
+create index if not exists checkins_user_id_idx on checkins (user_id);
 
 -- ─── check_in() — atomic check-in + points award ────────────────────────────
 -- Called from the app via supabase.rpc('check_in', ...). A function body runs
@@ -165,3 +197,10 @@ $$;
 -- reaches Supabase directly — the Next.js route handlers proxy every query and
 -- enforce authorization (lib/auth.ts) — so the publishable/anon key is used
 -- server-side with full table access and no per-row policies.
+
+-- ─── Refresh PostgREST's schema cache ───────────────────────────────────────
+-- PostgREST (the REST/RPC layer the app calls) caches the DB schema. A function
+-- or column added above is invisible — `rpc('check_in', …)` returns PGRST202
+-- "Could not find the function" — until the cache reloads. This NOTIFY forces
+-- an immediate reload so check-in works the moment this script finishes.
+notify pgrst, 'reload schema';

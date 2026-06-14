@@ -73,9 +73,6 @@ export function ProfileForm({
     setError(null);
 
     const errors: Record<string, string> = {};
-    if (!firstName.trim()) errors.firstName = "กรุณากรอกชื่อจริง";
-    if (!lastName.trim()) errors.lastName = "กรุณากรอกนามสกุล";
-    if (!nickname.trim()) errors.nickname = "กรุณากรอกชื่อเล่น";
     if (orientation === "other" && !orientationOther.trim()) {
       errors.orientationOther = "กรุณาระบุอัตลักษณ์ของคุณ";
     }
@@ -85,11 +82,10 @@ export function ProfileForm({
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    const patch: ProfilePatch = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      nickname: nickname.trim(),
-    };
+    const patch: ProfilePatch = {};
+    if (firstName.trim()) patch.firstName = firstName.trim();
+    if (lastName.trim()) patch.lastName = lastName.trim();
+    if (nickname.trim()) patch.nickname = nickname.trim();
     if (birthdate) patch.birthdate = birthdate;
     if (email.trim()) patch.email = email.trim();
     if (phoneNumber.trim()) patch.phoneNumber = phoneNumber.trim();
@@ -121,14 +117,14 @@ export function ProfileForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="ชื่อจริง" required error={fieldErrors.firstName}>
+        <Field label="ชื่อจริง" error={fieldErrors.firstName}>
           <Input
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             autoComplete="given-name"
           />
         </Field>
-        <Field label="นามสกุล" required error={fieldErrors.lastName}>
+        <Field label="นามสกุล" error={fieldErrors.lastName}>
           <Input
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
@@ -137,7 +133,7 @@ export function ProfileForm({
         </Field>
       </div>
 
-      <Field label="ชื่อเล่น" required error={fieldErrors.nickname}>
+      <Field label="ชื่อเล่น" error={fieldErrors.nickname}>
         <Input value={nickname} onChange={(e) => setNickname(e.target.value)} />
       </Field>
 

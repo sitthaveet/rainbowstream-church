@@ -9,7 +9,7 @@ import { AuthBoundary } from "@/components/guard";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
-import { PageSpinner } from "@/components/ui/spinner";
+import { PageSpinner, Spinner } from "@/components/ui/spinner";
 import { formatEventRange } from "@/lib/format";
 import {
   checkIn,
@@ -43,8 +43,6 @@ function CheckinContent() {
   const router = useRouter();
   const params = useSearchParams();
   const code = params.get("code");
-  // Set when returning from the registration detour — skips the confirm tap.
-  const auto = params.get("auto") === "1";
 
   const [phase, setPhase] = useState<Phase>(code ? "loading" : "invalid");
   const [event, setEvent] = useState<EventByCode | null>(null);
@@ -80,10 +78,11 @@ function CheckinContent() {
     };
   }, [code, userId]);
 
-  // Register-first gate: finish the profile, then come back and auto check-in.
+  // Register-first gate: finish the profile, then come back — the check-in
+  // fires automatically once the event resolves on return.
   useEffect(() => {
     if (user && !registered && code) {
-      const next = `/checkin?code=${encodeURIComponent(code)}&auto=1`;
+      const next = `/checkin?code=${encodeURIComponent(code)}`;
       router.replace(`/register?next=${encodeURIComponent(next)}`);
     }
   }, [user, registered, code, router]);
@@ -106,12 +105,15 @@ function CheckinContent() {
     }
   }, [code, refreshUser]);
 
+  // Check in automatically as soon as the event resolves — no manual confirm.
+  // The guard ref ensures this fires exactly once, even though refreshUser()
+  // after success can re-render this component.
   useEffect(() => {
-    if (auto && phase === "ready" && registered && !autoFiredRef.current) {
+    if (phase === "ready" && registered && !autoFiredRef.current) {
       autoFiredRef.current = true;
       void doCheckin();
     }
-  }, [auto, phase, registered, doCheckin]);
+  }, [phase, registered, doCheckin]);
 
   if (!registered) return <PageSpinner label="กำลังไปหน้าลงทะเบียน…" />;
 
@@ -161,14 +163,10 @@ function CheckinContent() {
       )}
 
       {(phase === "ready" || phase === "checking") && (
-        <Button
-          size="lg"
-          className="w-full"
-          loading={phase === "checking"}
-          onClick={doCheckin}
-        >
-          ยืนยันเช็คอิน
-        </Button>
+        <div className="flex items-center justify-center gap-3 py-4 text-muted-foreground">
+          <Spinner className="size-6 text-decoration" />
+          <p className="text-sm">กำลังเช็คอิน…</p>
+        </div>
       )}
 
       {phase === "success" && (

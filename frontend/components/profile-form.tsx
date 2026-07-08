@@ -15,17 +15,17 @@ import {
 } from "@/lib/client";
 
 const SEX_OPTIONS: Array<{ value: SexAtBirthValue; label: string }> = [
-  { value: "male", label: "ชาย" },
-  { value: "female", label: "หญิง" },
-  { value: "intersex", label: "อินเตอร์เซ็กซ์" },
+  { value: "male", label: "ชาย · Male" },
+  { value: "female", label: "หญิง · Female" },
+  { value: "intersex", label: "อินเตอร์เซ็กซ์ · Intersex" },
 ];
 
 const ORIENTATION_OPTIONS: Array<{ value: OrientationValue; label: string }> = [
-  { value: "gay_lesbian", label: "เกย์ / เลสเบี้ยน" },
-  { value: "bisexual", label: "ไบเซ็กชวล" },
-  { value: "straight", label: "สเตรท" },
-  { value: "transgender", label: "คนข้ามเพศ" },
-  { value: "other", label: "อื่น ๆ" },
+  { value: "gay_lesbian", label: "เกย์ / เลสเบี้ยน · Gay / Lesbian" },
+  { value: "bisexual", label: "ไบเซ็กชวล · Bisexual" },
+  { value: "straight", label: "สเตรท · Straight" },
+  { value: "transgender", label: "คนข้ามเพศ · Transgender" },
+  { value: "other", label: "อื่น ๆ · Other" },
 ];
 
 /**
@@ -117,14 +117,14 @@ export function ProfileForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="ชื่อจริง" error={fieldErrors.firstName}>
+        <Field label="ชื่อจริง" sublabel="First name" error={fieldErrors.firstName}>
           <Input
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             autoComplete="given-name"
           />
         </Field>
-        <Field label="นามสกุล" error={fieldErrors.lastName}>
+        <Field label="นามสกุล" sublabel="Last name" error={fieldErrors.lastName}>
           <Input
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
@@ -133,11 +133,11 @@ export function ProfileForm({
         </Field>
       </div>
 
-      <Field label="ชื่อเล่น" error={fieldErrors.nickname}>
+      <Field label="ชื่อเล่น" sublabel="Nickname" error={fieldErrors.nickname}>
         <Input value={nickname} onChange={(e) => setNickname(e.target.value)} />
       </Field>
 
-      <Field label="วันเกิด">
+      <Field label="วันเกิด" sublabel="Date of birth">
         <Input
           type="date"
           value={birthdate}
@@ -145,7 +145,7 @@ export function ProfileForm({
         />
       </Field>
 
-      <Field label="อีเมล">
+      <Field label="อีเมล" sublabel="Email">
         <Input
           type="email"
           value={email}
@@ -154,7 +154,7 @@ export function ProfileForm({
         />
       </Field>
 
-      <Field label="เบอร์โทรศัพท์">
+      <Field label="เบอร์โทรศัพท์" sublabel="Phone number">
         <Input
           type="tel"
           value={phoneNumber}
@@ -163,7 +163,7 @@ export function ProfileForm({
         />
       </Field>
 
-      <Field label="ที่อยู่">
+      <Field label="ที่อยู่" sublabel="Address">
         <Textarea
           value={address}
           onChange={(e) => setAddress(e.target.value)}
@@ -172,12 +172,12 @@ export function ProfileForm({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="เพศกำเนิด">
+        <Field label="เพศกำเนิด" sublabel="Sex at birth">
           <Select
             value={sexAtBirth}
             onChange={(e) => setSexAtBirth(e.target.value)}
           >
-            <option value="">— เลือก —</option>
+            <option value="">— เลือก · Select —</option>
             {SEX_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -185,12 +185,12 @@ export function ProfileForm({
             ))}
           </Select>
         </Field>
-        <Field label="อัตลักษณ์ทางเพศ">
+        <Field label="อัตลักษณ์ทางเพศ" sublabel="Gender identity">
           <Select
             value={orientation}
             onChange={(e) => setOrientation(e.target.value)}
           >
-            <option value="">— เลือก —</option>
+            <option value="">— เลือก · Select —</option>
             {ORIENTATION_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -201,7 +201,12 @@ export function ProfileForm({
       </div>
 
       {orientation === "other" && (
-        <Field label="ระบุอัตลักษณ์" required error={fieldErrors.orientationOther}>
+        <Field
+          label="ระบุอัตลักษณ์"
+          sublabel="Please specify"
+          required
+          error={fieldErrors.orientationOther}
+        >
           <Input
             value={orientationOther}
             onChange={(e) => setOrientationOther(e.target.value)}
@@ -211,7 +216,8 @@ export function ProfileForm({
 
       <Field
         label="เป็นคริสเตียนมาแล้วกี่ปี"
-        hint="ใส่ 0 หากยังไม่เป็นคริสเตียน"
+        sublabel="How many years u became Christian"
+        hint="ใส่ 0 หากยังไม่เป็นคริสเตียน · Enter 0 if not yet a Christian"
         error={fieldErrors.christianDuration}
       >
         <Input
@@ -223,16 +229,16 @@ export function ProfileForm({
         />
       </Field>
 
-      <Field label="คริสตจักรที่สังกัด">
+      <Field label="คริสตจักรที่สังกัด" sublabel="Church">
         <Input value={church} onChange={(e) => setChurch(e.target.value)} />
       </Field>
 
-      <Field label="แนะนำตัวเอง">
+      <Field label="แนะนำตัวเอง" sublabel="Introduce yourself">
         <Textarea
           value={selfIntroduction}
           onChange={(e) => setSelfIntroduction(e.target.value)}
           rows={3}
-          placeholder="เล่าให้เราฟังหน่อยว่าคุณเป็นใคร 💕"
+          placeholder="เล่าให้เราฟังหน่อยว่าคุณเป็นใคร · Tell us about yourself 💕"
         />
       </Field>
 

@@ -2,12 +2,12 @@
  * The data-access layer — the single boundary between the app's camelCase
  * domain types (lib/types.ts) and Postgres' snake_case columns.
  *
- * Every function here speaks snake_case to Supabase and returns camelCase
- * domain objects, so route handlers, lib/client.ts, and the components never
- * see a raw row. Reads/writes/RPC all live here; the route handlers call these
- * functions and never touch the Supabase client directly.
+ * Every function here speaks snake_case SQL to Postgres (Neon, via lib/pg.ts)
+ * and returns camelCase domain objects, so route handlers, lib/client.ts, and
+ * the components never see a raw row. Reads/writes/RPC all live here; the
+ * route handlers call these functions and never touch the pool directly.
  */
-import { supabase } from "./supabase";
+import { query } from "./pg";
 import type {
   User,
   MemberSummary,
@@ -166,46 +166,54 @@ function profileToRow(f: ProfileFields) {
   };
 }
 
+/**
+ * Builds `col1 = $2, col2 = $3, …` from a payload row, skipping `undefined`
+ * values — an absent field leaves the column untouched, while an explicit
+ * `null` clears it. `$1` is reserved for the row id. Column names come from
+ * our own literal payload objects above, never from user input.
+ */
+function setClause(row: Record<string, unknown>): {
+  sets: string;
+  values: unknown[];
+} {
+  const entries = Object.entries(row).filter(([, v]) => v !== undefined);
+  return {
+    sets: entries.map(([col], i) => `${col} = $${i + 2}`).join(", "),
+    values: entries.map(([, v]) => v),
+  };
+}
+
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export async function getUserByLineUid(lineUid: string): Promise<User | null> {
-  const { data, error } = await supabase
-    .from("users")
-    .select(USER_COLS)
-    .eq("line_uid", lineUid)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toUser(data) : null;
+  const { rows } = await query(
+    `select ${USER_COLS} from users where line_uid = $1`,
+    [lineUid],
+  );
+  return rows[0] ? toUser(rows[0]) : null;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  const { data, error } = await supabase
-    .from("users")
-    .select(USER_COLS)
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toUser(data) : null;
+  const { rows } = await query(`select ${USER_COLS} from users where id = $1`, [
+    id,
+  ]);
+  return rows[0] ? toUser(rows[0]) : null;
 }
 
 export async function listUsers(): Promise<MemberSummary[]> {
-  const { data, error } = await supabase
-    .from("users")
-    .select(MEMBER_COLS)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map(toMemberSummary);
+  const { rows } = await query(
+    `select ${MEMBER_COLS} from users order by created_at desc`,
+  );
+  return rows.map(toMemberSummary);
 }
 
 /** Auto-creates an account on first LINE login (only line_uid is known). */
 export async function createUser(lineUid: string): Promise<User> {
-  const { data, error } = await supabase
-    .from("users")
-    .insert({ line_uid: lineUid })
-    .select(USER_COLS)
-    .single();
-  if (error) throw error;
-  return toUser(data);
+  const { rows } = await query(
+    `insert into users (line_uid) values ($1) returning ${USER_COLS}`,
+    [lineUid],
+  );
+  return toUser(rows[0]);
 }
 
 /**
@@ -221,136 +229,115 @@ export async function updateUserProfile(
 ): Promise<User | null> {
   const row: Record<string, unknown> = profileToRow(fields);
   if (opts.markRegistered) row.registered_at = new Date().toISOString();
-  const { data, error } = await supabase
-    .from("users")
-    .update(row)
-    .eq("id", id)
-    .select(USER_COLS)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toUser(data) : null;
+  const { sets, values } = setClause(row);
+  const { rows } = await query(
+    `update users set ${sets} where id = $1 returning ${USER_COLS}`,
+    [id, ...values],
+  );
+  return rows[0] ? toUser(rows[0]) : null;
 }
 
 export async function updateUserRole(
   id: string,
   role: UserRole,
 ): Promise<User | null> {
-  const { data, error } = await supabase
-    .from("users")
-    .update({ role })
-    .eq("id", id)
-    .select(USER_COLS)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toUser(data) : null;
+  const { rows } = await query(
+    `update users set role = $2 where id = $1 returning ${USER_COLS}`,
+    [id, role],
+  );
+  return rows[0] ? toUser(rows[0]) : null;
 }
 
 /** Returns true if a row was deleted, false if the id did not exist. */
 export async function deleteUser(id: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("users")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .maybeSingle();
-  if (error) throw error;
-  return data != null;
+  const { rows } = await query(`delete from users where id = $1 returning id`, [
+    id,
+  ]);
+  return rows.length > 0;
 }
 
 /**
  * Counts users currently holding the pastor role — backs the "at least one
- * pastor must remain" guard. Uses a head/count query so no rows are fetched.
+ * pastor must remain" guard. `::int` keeps the count a number (bigint would
+ * arrive as a string).
  */
 export async function countPastors(): Promise<number> {
-  const { count, error } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .eq("role", "pastor");
-  if (error) throw error;
-  return count ?? 0;
+  const { rows } = await query(
+    `select count(*)::int as count from users where role = 'pastor'`,
+  );
+  return rows[0]?.count ?? 0;
 }
 
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 export async function listEvents(): Promise<EventSummary[]> {
-  const { data, error } = await supabase
-    .from("events")
-    .select(EVENT_SUMMARY_COLS)
-    .order("starts_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map(toEventSummary);
+  const { rows } = await query(
+    `select ${EVENT_SUMMARY_COLS} from events order by starts_at desc`,
+  );
+  return rows.map(toEventSummary);
 }
 
 export async function getEventById(id: string): Promise<EventDetail | null> {
-  const { data, error } = await supabase
-    .from("events")
-    .select(EVENT_COLS)
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toEventDetail(data) : null;
+  const { rows } = await query(
+    `select ${EVENT_COLS} from events where id = $1`,
+    [id],
+  );
+  return rows[0] ? toEventDetail(rows[0]) : null;
 }
 
 export async function getEventByCheckinCode(
   checkinCode: string,
 ): Promise<EventByCode | null> {
-  const { data, error } = await supabase
-    .from("events")
-    .select(EVENT_BY_CODE_COLS)
-    .eq("checkin_code", checkinCode)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toEventByCode(data) : null;
+  const { rows } = await query(
+    `select ${EVENT_BY_CODE_COLS} from events where checkin_code = $1`,
+    [checkinCode],
+  );
+  return rows[0] ? toEventByCode(rows[0]) : null;
 }
 
 export async function createEvent(
   input: CreateEventInput,
 ): Promise<EventDetail> {
-  const { data, error } = await supabase
-    .from("events")
-    .insert({
-      title: input.title,
-      description: input.description,
-      location: input.location,
-      starts_at: input.startsAt,
-      ends_at: input.endsAt,
-      created_by: input.createdById,
-    })
-    .select(EVENT_COLS)
-    .single();
-  if (error) throw error;
-  return toEventDetail(data);
+  const { rows } = await query(
+    `insert into events (title, description, location, starts_at, ends_at, created_by)
+     values ($1, $2, $3, $4, $5, $6)
+     returning ${EVENT_COLS}`,
+    [
+      input.title,
+      input.description ?? null,
+      input.location ?? null,
+      input.startsAt,
+      input.endsAt ?? null,
+      input.createdById,
+    ],
+  );
+  return toEventDetail(rows[0]);
 }
 
 export async function updateEvent(
   id: string,
   input: UpdateEventInput,
 ): Promise<EventDetail | null> {
-  const { data, error } = await supabase
-    .from("events")
-    .update({
-      title: input.title,
-      description: input.description,
-      location: input.location,
-      starts_at: input.startsAt,
-      ends_at: input.endsAt,
-    })
-    .eq("id", id)
-    .select(EVENT_COLS)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toEventDetail(data) : null;
+  const { sets, values } = setClause({
+    title: input.title,
+    description: input.description,
+    location: input.location,
+    starts_at: input.startsAt,
+    ends_at: input.endsAt,
+  });
+  const { rows } = await query(
+    `update events set ${sets} where id = $1 returning ${EVENT_COLS}`,
+    [id, ...values],
+  );
+  return rows[0] ? toEventDetail(rows[0]) : null;
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("events")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .maybeSingle();
-  if (error) throw error;
-  return data != null;
+  const { rows } = await query(
+    `delete from events where id = $1 returning id`,
+    [id],
+  );
+  return rows.length > 0;
 }
 
 // ─── Check-ins ───────────────────────────────────────────────────────────────
@@ -365,24 +352,30 @@ export async function checkInUser(
   eventId: string,
   userId: string,
 ): Promise<{ id: string }> {
-  const { data, error } = await supabase.rpc("check_in", {
-    p_event_id: eventId,
-    p_user_id: userId,
-  });
-  if (error) throw error;
-  return { id: data as string };
+  const { rows } = await query(`select check_in($1, $2) as id`, [
+    eventId,
+    userId,
+  ]);
+  return { id: rows[0].id as string };
 }
 
 export async function listEventCheckins(
   eventId: string,
 ): Promise<EventCheckin[]> {
-  const { data, error } = await supabase
-    .from("checkins")
-    .select("id, checked_in_at, user:users(id, first_name, last_name, nickname)")
-    .eq("event_id", eventId)
-    .order("checked_in_at", { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map((r: any) => ({
+  // json_build_object keeps the nested shape the old PostgREST embed returned,
+  // so the row mappers stay identical.
+  const { rows } = await query(
+    `select c.id, c.checked_in_at,
+            json_build_object('id', u.id, 'first_name', u.first_name,
+                              'last_name', u.last_name, 'nickname', u.nickname)
+              as "user"
+       from checkins c
+       join users u on u.id = c.user_id
+      where c.event_id = $1
+      order by c.checked_in_at asc`,
+    [eventId],
+  );
+  return rows.map((r: any) => ({
     id: r.id,
     checkedInAt: r.checked_in_at,
     user: toUserBrief(r.user),
@@ -392,13 +385,18 @@ export async function listEventCheckins(
 export async function listUserCheckins(
   userId: string,
 ): Promise<UserCheckin[]> {
-  const { data, error } = await supabase
-    .from("checkins")
-    .select("id, checked_in_at, event:events(id, title, location, starts_at)")
-    .eq("user_id", userId)
-    .order("checked_in_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((r: any) => ({
+  const { rows } = await query(
+    `select c.id, c.checked_in_at,
+            json_build_object('id', e.id, 'title', e.title,
+                              'location', e.location, 'starts_at', e.starts_at)
+              as "event"
+       from checkins c
+       join events e on e.id = c.event_id
+      where c.user_id = $1
+      order by c.checked_in_at desc`,
+    [userId],
+  );
+  return rows.map((r: any) => ({
     id: r.id,
     checkedInAt: r.checked_in_at,
     event: toEventBrief(r.event),

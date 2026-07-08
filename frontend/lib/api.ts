@@ -19,10 +19,10 @@ export function jsonError(status: number, message: string, code = "error") {
 }
 
 /**
- * Detects a Postgres unique-constraint violation surfaced through Supabase.
+ * Detects a Postgres unique-constraint violation.
  *
- * Supabase/PostgREST exposes a structured error with `code === "23505"` and the
- * constraint name in `message`/`details` (e.g. `users_email_key`,
+ * node-postgres exposes a structured error with `code === "23505"` and the
+ * constraint name in `constraint`/`message`/`detail` (e.g. `users_email_key`,
  * `users_line_uid_key`, `checkins_event_id_user_id_key`). We key off the code
  * first, with a defensive text fallback for errors that arrive less structured.
  *
@@ -47,9 +47,10 @@ export function isUniqueViolation(
 
 /**
  * Flattens an error into one searchable string, collecting `message`/`code`/
- * `details`/`hint` from the error and any nested wrapper (`response`, `cause`).
- * A PostgREST unique violation spreads the constraint name and detail across
- * these fields, so all are searched rather than relying on `err.message` alone.
+ * `details`/`detail`/`hint`/`constraint` from the error and any nested wrapper
+ * (`response`, `cause`). A Postgres unique violation spreads the constraint
+ * name and detail across these fields, so all are searched rather than relying
+ * on `err.message` alone.
  */
 function errorText(err: unknown): string {
   const parts: string[] = [];
@@ -66,7 +67,9 @@ function errorText(err: unknown): string {
     if (typeof o.message === "string") parts.push(o.message);
     if (typeof o.code === "string") parts.push(o.code);
     if (typeof o.details === "string") parts.push(o.details);
+    if (typeof o.detail === "string") parts.push(o.detail);
     if (typeof o.hint === "string") parts.push(o.hint);
+    if (typeof o.constraint === "string") parts.push(o.constraint);
     visit(o.response, depth + 1);
     visit(o.cause, depth + 1);
   };

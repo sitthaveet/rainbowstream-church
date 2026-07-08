@@ -10,19 +10,19 @@ This project is a web-based for Rainbow Stream church management. It's very simp
 
 # Technology Stack
 - **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4, with the LINE LIFF SDK (`@line/liff`). NPM for packages.
-- **Database**: Supabase (hosted PostgreSQL). The browser never talks to it directly.
+- **Database**: Neon Serverless Postgres
 - **Backend**: Next.js route handlers (`frontend/app/api/**`) proxy every DB operation and enforce authorization. Request bodies are validated with Zod.
 - **Auth/session**: a server-signed JWT session cookie (`jose`), bridged from the LINE ID token (see Authentication).
 - **Other libs**: `qrcode.react` (event QR codes), `motion` (Framer Motion v12, animations).
-- **Deployment**: Vercel for frontend, Supabase for database.
+- **Deployment**: Vercel for frontend,  Neon for database.
 
 # Project Structure
 - `frontend`: Next.js app (App Router) with the LIFF SDK.
   - `app/`: pages (`/`, `/checkin`, `/register`, `/profile`, `/history`, `/admin/events`, `/admin/members`) and the API route handlers under `app/api/**`.
-  - `lib/`: the server/client boundary — `db.ts` (the only place that talks to Supabase; maps snake_case ⇄ camelCase), `supabase.ts` (server client), `auth.ts` (session → user + role checks), `session.ts` (JWT cookie), `line.ts` (ID-token verification), `validation.ts` (Zod schemas), `api.ts` (route error handling), `client.ts` (the browser's typed API client), `types.ts` (domain types/enums).
+  - `lib/`: the server/client boundary — `db.ts` (the only place that talks to Postgres; maps snake_case ⇄ camelCase), `pg.ts` (server-side connection pool), `auth.ts` (session → user + role checks), `session.ts` (JWT cookie), `line.ts` (ID-token verification), `validation.ts` (Zod schemas), `api.ts` (route error handling), `client.ts` (the browser's typed API client), `types.ts` (domain types/enums).
   - `providers/`: client context — `liff-providers.tsx` (`liff.init()`) and `auth-provider.tsx` (session bootstrap).
   - `components/`: UI components, with primitives under `components/ui/`.
-- `supabase`: `schema.sql` — the full database schema (tables, enums, indexes, `check_in()` RPC).
+- `database`: `schema.sql` — the full database schema (tables, enums, indexes, `check_in()` function); the database now lives on Neon.
 
 # User Flow
 - User scan QR code at the event to check in.
@@ -34,7 +34,7 @@ This project is a web-based for Rainbow Stream church management. It's very simp
 
 # Context
 - For Design go to @DESIGN.md
-- For Database schema, check at @supabase/schema.sql
+- For Database schema, check at @database/schema.sql
 
 # Security
 - Only pastor role can create, update, delete events and view, update, delete check-in data.
@@ -60,25 +60,29 @@ This project is a web-based for Rainbow Stream church management. It's very simp
   single profile field); the `registered` flag on the auth responses drives the `/register` redirect.
 
 # Operations
-- **Database**: the browser never talks to Supabase directly — all DB access is proxied through
+- **Database**: the browser never talks to Postgres directly — all DB access is proxied through
   the Next.js route handlers (`frontend/app/api/**`), which enforce authorization (`lib/auth.ts`).
-  The server uses the Supabase publishable key (`SUPABASE_PUBLIC_API_KEY`) with RLS disabled.
-  `frontend/lib/db.ts` is the single boundary that maps snake_case columns ⇄ camelCase domain types.
-- **Schema setup**: run `supabase/schema.sql` in the Supabase SQL editor (tables, enums, indexes,
+  The server connects to Neon with `pg` via a shared pool (`frontend/lib/pg.ts`) using the
+  `NEON_CONNECTION` string; there is no row-level security, so the connection string must stay
+  server-only. `frontend/lib/db.ts` is the single boundary that maps snake_case columns ⇄
+  camelCase domain types.
+- **Schema setup**: run `database/schema.sql` in the Neon SQL editor or via
+  `psql "$NEON_CONNECTION" -f database/schema.sql` (tables, enums, indexes,
   and the `check_in()` function for atomic check-in + points).
 - **First pastor bootstrap**: role changes require an existing pastor, so promote the founding
-  pastor manually in the Supabase SQL editor:
+  pastor manually in the Neon SQL editor:
   `update users set role = 'pastor' where line_uid = '<LINE userId>';`
   Everyone after that can be promoted in the app (จัดการสมาชิก).
 - **Environment variables** (`frontend/.env.local`):
-  - `SUPABASE_URL`, `SUPABASE_PUBLIC_API_KEY` — server-side Supabase client (keep server-only).
+  - `NEON_CONNECTION` — Postgres connection string for Neon (keep server-only; use the
+    pooled `-pooler` endpoint in production).
   - `SESSION_SECRET` — signs the JWT session cookie.
   - `NEXT_PUBLIC_LIFF_ID` — passed to `liff.init()`.
   - `NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID` — LINE Login channel ID, used to verify ID tokens.
-- **Local dev**: `cd frontend && npm run dev` (Supabase is hosted; no local DB emulator).
+- **Local dev**: `cd frontend && npm run dev` (Neon is hosted; no local DB emulator).
 
 # References
-- Supabase: https://supabase.com/docs
+- Neon: https://neon.com/docs
 - LINE LIFF: https://developers.line.biz/en/docs/liff/
 - LINE login: https://developers.line.biz/en/docs/line-login/
 

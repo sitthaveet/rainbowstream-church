@@ -1,11 +1,11 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- Rainbow Stream Church — Supabase schema
--- Replicates the Firebase Data Connect schema (dataconnect/schema/schema.gql).
--- Paste into the Supabase SQL Editor and run. The whole script is idempotent —
--- every statement is guarded (do-block enums, `if not exists`, `or replace`) so
--- re-running it on an existing project is safe and, crucially, NEVER aborts
--- partway: an early "type already exists" used to kill the batch before it
--- reached check_in() at the bottom, leaving the app with a missing RPC.
+-- Rainbow Stream Church — database schema (Neon Postgres)
+-- Run in the Neon SQL editor or via `psql "$NEON_CONNECTION" -f schema.sql`.
+-- The whole script is idempotent — every statement is guarded (do-block enums,
+-- `if not exists`, `or replace`) so re-running it on an existing database is
+-- safe and, crucially, NEVER aborts partway: an early "type already exists"
+-- used to kill the batch before it reached check_in() at the bottom, leaving
+-- the app with a missing function.
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ─── Enums ──────────────────────────────────────────────────────────────────
@@ -170,8 +170,8 @@ create table if not exists checkins (
 create index if not exists checkins_user_id_idx on checkins (user_id);
 
 -- ─── check_in() — atomic check-in + points award ────────────────────────────
--- Called from the app via supabase.rpc('check_in', ...). A function body runs
--- in a single implicit transaction: a duplicate (event_id, user_id) raises
+-- Called from the app via `select check_in(...)` (lib/db.ts). A function body
+-- runs in a single implicit transaction: a duplicate (event_id, user_id) raises
 -- SQLSTATE 23505, which aborts the whole function so the points increment rolls
 -- back too — the route handler maps that 23505 to a 409. Keep the `+ 10` in
 -- sync with POINTS_PER_CHECKIN in app/api/checkins/route.ts.
@@ -194,13 +194,6 @@ $$;
 
 -- ─── Row Level Security ─────────────────────────────────────────────────────
 -- RLS is intentionally left DISABLED (the Postgres default). The browser never
--- reaches Supabase directly — the Next.js route handlers proxy every query and
--- enforce authorization (lib/auth.ts) — so the publishable/anon key is used
--- server-side with full table access and no per-row policies.
-
--- ─── Refresh PostgREST's schema cache ───────────────────────────────────────
--- PostgREST (the REST/RPC layer the app calls) caches the DB schema. A function
--- or column added above is invisible — `rpc('check_in', …)` returns PGRST202
--- "Could not find the function" — until the cache reloads. This NOTIFY forces
--- an immediate reload so check-in works the moment this script finishes.
-notify pgrst, 'reload schema';
+-- reaches Postgres directly — the Next.js route handlers proxy every query and
+-- enforce authorization (lib/auth.ts) — so the server connects with full table
+-- access (NEON_CONNECTION, server-only) and no per-row policies.

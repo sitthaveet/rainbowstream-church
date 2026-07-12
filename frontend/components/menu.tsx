@@ -9,8 +9,8 @@ import { cn } from "@/lib/cn";
 const ITEMS = [
   { href: "/", icon: "🏠", label: "หน้าหลัก" },
   { href: "/profile", icon: "💗", label: "ข้อมูลของฉัน" },
-  { href: "/history", icon: "✨", label: "ประวัติเช็คอิน" },
   { href: "/leaderboard", icon: "🏆", label: "อันดับแต้มสะสม" },
+  { href: "/history", icon: "✨", label: "ประวัติเช็คอิน" },
 ] as const;
 
 /** Hamburger menu pinned to the top-left of the fixed header, opening a
@@ -87,9 +87,8 @@ export function Menu() {
             >
               <div className="flex items-center justify-between px-5 pt-5 pb-4">
                 <div>
-                  <p className="text-brand font-sans text-xs font-medium">เมนู</p>
                   <p className="font-display text-xl text-headings">
-                    Rainbow Stream
+                    เมนู
                   </p>
                 </div>
                 <button

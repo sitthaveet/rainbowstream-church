@@ -173,8 +173,8 @@ create index if not exists checkins_user_id_idx on checkins (user_id);
 -- Called from the app via `select check_in(...)` (lib/db.ts). A function body
 -- runs in a single implicit transaction: a duplicate (event_id, user_id) raises
 -- SQLSTATE 23505, which aborts the whole function so the points increment rolls
--- back too — the route handler maps that 23505 to a 409. Keep the `+ 10` in
--- sync with POINTS_PER_CHECKIN in app/api/checkins/route.ts.
+-- back too — performCheckIn (frontend/lib/checkin.ts) maps that 23505 to a 409.
+-- Keep the `+ 10` in sync with POINTS_PER_CHECKIN there.
 create or replace function check_in(p_event_id uuid, p_user_id uuid)
 returns uuid
 language plpgsql

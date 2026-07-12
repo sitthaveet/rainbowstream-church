@@ -69,6 +69,7 @@ export type MemberSummary = Pick<
   | "points"
   | "role"
   | "createdAt"
+  | "updatedAt"
 >;
 
 /** The profile fields a user may set — the write payload for updateUserProfile. */

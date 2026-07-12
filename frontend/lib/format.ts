@@ -1,5 +1,28 @@
-/** Thai-locale date/time formatting. `th-TH` uses the Buddhist calendar
- *  (พ.ศ.) by default, matching how members read dates. */
+/** Thai-locale date/time formatting (`th-TH` uses the Buddhist calendar —
+ *  พ.ศ. — by default, matching how members read dates) and other shared
+ *  display formatting. */
+
+/** "ชื่อ นามสกุล (ชื่อเล่น)" with graceful fallbacks for partly-filled
+ *  profiles; unregistered users show as "ยังไม่ได้ลงทะเบียน". */
+export function displayName(user: {
+  firstName?: string | null;
+  lastName?: string | null;
+  nickname?: string | null;
+}): string {
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
+  if (name && user.nickname) return `${name} (${user.nickname})`;
+  return name || user.nickname || "ยังไม่ได้ลงทะเบียน";
+}
+
+/** True while an event counts as upcoming: it has not yet ended as of `refMs`
+ *  (falling back to its start when it has no end time). Callers pick the
+ *  cutoff — exact now, or local midnight to keep today's events listed. */
+export function isUpcomingEvent(
+  event: { startsAt: string; endsAt?: string | null },
+  refMs: number,
+): boolean {
+  return Date.parse(event.endsAt ?? event.startsAt) >= refMs;
+}
 
 export function formatThaiDate(iso: string): string {
   return new Intl.DateTimeFormat("th-TH", { dateStyle: "long" }).format(

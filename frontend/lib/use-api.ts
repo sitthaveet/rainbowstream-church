@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-interface UseApiResult<T> {
+export interface UseApiResult<T> {
   data: T | null;
   error: unknown;
   isLoading: boolean;

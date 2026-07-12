@@ -8,7 +8,6 @@
  */
 import type {
   User,
-  UserRole,
   SexAtBirth,
   IdentityOrientation,
   EventSummary as EventSummaryRow,
@@ -21,7 +20,6 @@ import type {
 
 // Browser-facing names for the domain enums. Aliased (not re-typed) so they
 // can't drift from lib/types.ts; the route JSON carries them as plain strings.
-export type Role = UserRole;
 export type SexAtBirthValue = SexAtBirth;
 export type OrientationValue = IdentityOrientation;
 
@@ -144,12 +142,6 @@ export const listUserCheckins = (id: string) =>
 
 export const listMembers = () => request<{ users: MemberSummary[] }>("/api/users");
 
-export const updateRole = (id: string, role: Role) =>
-  request<{ user: ApiUser }>(`/api/users/${id}/role`, {
-    method: "PATCH",
-    body: JSON.stringify({ role }),
-  });
-
 export const deleteMember = (id: string) =>
   request<{ ok: true }>(`/api/users/${id}`, { method: "DELETE" });
 
@@ -179,14 +171,28 @@ export const deleteEvent = (id: string) =>
 export const listEventCheckins = (id: string) =>
   request<{ checkins: EventCheckin[] }>(`/api/events/${id}/checkins`);
 
+/** Pastor checks a member in on their behalf (no QR code needed). */
+export const adminCheckIn = (eventId: string, userId: string) =>
+  request<{
+    checkin: { id: string; eventId: string; userId: string };
+    pointsAwarded: number;
+  }>(`/api/events/${eventId}/checkins`, {
+    method: "POST",
+    body: JSON.stringify({ userId }),
+  });
+
 // ─── Error display ───────────────────────────────────────────────────────────
+
+/** Shown for `already_checked_in` — also rendered outside error paths (e.g.
+ *  the self check-in state on the admin event page), so shared from here. */
+export const ALREADY_CHECKED_IN_MESSAGE = "คุณได้เช็คอินกิจกรรมนี้ไปแล้ว";
 
 /** Thai user-facing message for a thrown error. */
 export function errorMessage(err: unknown): string {
   if (err instanceof ClientApiError) {
     switch (err.code) {
       case "already_checked_in":
-        return "คุณได้เช็คอินกิจกรรมนี้ไปแล้ว";
+        return ALREADY_CHECKED_IN_MESSAGE;
       case "not_found":
         return "ไม่พบข้อมูลที่ต้องการ";
       case "unauthorized":

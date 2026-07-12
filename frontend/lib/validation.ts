@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SexAtBirth, IdentityOrientation, UserRole } from "@/lib/types";
+import { SexAtBirth, IdentityOrientation } from "@/lib/types";
 import { ApiError } from "./api";
 
 /** A loose ISO date-time / timestamp string accepted by the API. */
@@ -105,12 +105,6 @@ export function assertIdentityConsistency(merged: {
   }
 }
 
-// ─── Role ────────────────────────────────────────────────────────────────────
-
-export const updateRoleSchema = z.strictObject({
-  role: z.enum(UserRole),
-});
-
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 /**
@@ -146,5 +140,14 @@ export type EventInput = z.infer<typeof createEventSchema>;
 // ─── Check-in ────────────────────────────────────────────────────────────────
 
 export const checkinSchema = z.strictObject({
-  checkinCode: z.string().regex(UUID_RE, "Invalid UUID"),
+  checkinCode: uuid,
+});
+
+/**
+ * Pastor checking a member in from the admin event page. Carries the target
+ * `userId` (the event comes from the URL) — pastor-only, so no `checkinCode`
+ * proof-of-attendance is needed here.
+ */
+export const adminCheckinSchema = z.strictObject({
+  userId: uuid,
 });

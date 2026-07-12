@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { motion, type Variants } from "motion/react";
+import { AnimatePresence, motion, type Variants } from "motion/react";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthBoundary } from "@/components/guard";
 import { Card } from "@/components/ui/card";
@@ -9,9 +10,11 @@ import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageSpinner } from "@/components/ui/spinner";
 import { EventCard } from "@/components/event-card";
-import { useApi } from "@/lib/use-api";
-import { listEvents, listUserCheckins } from "@/lib/client";
-import { formatThaiDateTime } from "@/lib/format";
+import { TabList } from "@/components/ui/tabs";
+import { useApi, type UseApiResult } from "@/lib/use-api";
+import { listEvents, type EventSummary } from "@/lib/client";
+import { isUpcomingEvent } from "@/lib/format";
+import { cn } from "@/lib/cn";
 
 // "Upcoming" cutoff: the start of today (local midnight), fixed at page load
 // (render-time Date.now() is impure). Judging by day rather than the exact
@@ -34,6 +37,21 @@ const item: Variants = {
     transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
   },
 };
+const panel: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.15, ease: "easeIn" } },
+};
+
+const TABS = [
+  { key: "home", icon: "🏠", label: "หน้าหลัก" },
+  { key: "admin", icon: "🛠️", label: "ศิษยาภิบาล" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
+
+/** The events fetch result, hoisted above the pastor tabs — useApi has no
+ *  cache, so it must live in a component that stays mounted across switches. */
+type EventsApi = UseApiResult<{ events: EventSummary[] }>;
 
 export default function HomePage() {
   return (
@@ -44,17 +62,96 @@ export default function HomePage() {
 }
 
 function HomeContent() {
-  const { user, registered } = useAuth();
+  const { user } = useAuth();
   const events = useApi(listEvents, [], !!user);
-  const checkins = useApi(() => listUserCheckins(user!.id), [user?.id], !!user);
+
+  if (user!.role !== "pastor") return <MemberHome events={events} />;
+  return <PastorHome events={events} />;
+}
+
+/** Pastor view: the member home and the admin tools, as two switchable tabs. */
+function PastorHome({ events }: { events: EventsApi }) {
+  const [tab, setTab] = useState<TabKey>("home");
+
+  return (
+    <div className="space-y-8">
+      <motion.div variants={item} initial="hidden" animate="show">
+        <HomeTabs value={tab} onChange={setTab} />
+      </motion.div>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={tab}
+          role="tabpanel"
+          id={`home-tabpanel-${tab}`}
+          aria-labelledby={`home-tab-${tab}`}
+          variants={panel}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+        >
+          {tab === "home" ? <MemberHome events={events} /> : <PastorTools />}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/** Segmented two-tab control; the active pill slides between tabs. */
+function HomeTabs({
+  value,
+  onChange,
+}: {
+  value: TabKey;
+  onChange: (tab: TabKey) => void;
+}) {
+  return (
+    <TabList
+      tabs={TABS.map((t) => ({
+        key: t.key,
+        label: (
+          <>
+            <span aria-hidden>{t.icon}</span>
+            {t.label}
+          </>
+        ),
+      }))}
+      value={value}
+      onChange={onChange}
+      idBase="home"
+      aria-label="สลับมุมมองหน้าหลัก"
+      className="rounded-2xl border border-border/70 bg-card/70 shadow-sm backdrop-blur-sm"
+      tabClassName={(active) =>
+        cn(
+          "relative rounded-xl px-3 py-2.5 font-sans text-sm font-medium transition-colors duration-200",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none",
+          active
+            ? "text-accent-foreground"
+            : "text-muted-foreground hover:text-foreground",
+        )
+      }
+      activeBackdrop={
+        <motion.span
+          aria-hidden
+          layoutId="home-tab-pill"
+          transition={{ type: "spring", stiffness: 420, damping: 36 }}
+          className="absolute inset-0 rounded-xl bg-accent/70 ring-1 ring-decoration/15 ring-inset"
+        />
+      }
+    />
+  );
+}
+
+/** The home every member sees: hero, points medallion, upcoming events. */
+function MemberHome({ events }: { events: EventsApi }) {
+  const { user, registered } = useAuth();
+  const isPastor = user!.role === "pastor";
 
   const upcoming = (events.data?.events ?? [])
-    .filter((e) => Date.parse(e.endsAt ?? e.startsAt) >= TODAY_START_MS)
+    .filter((e) => isUpcomingEvent(e, TODAY_START_MS))
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
     .slice(0, 3);
-  const recent = (checkins.data?.checkins ?? []).slice(0, 3);
   const displayName = user!.nickname || user!.firstName || "เพื่อน";
-  const isPastor = user!.role === "pastor";
 
   return (
     <motion.div
@@ -120,67 +217,39 @@ function HomeContent() {
           )}
         </div>
       </motion.section>
-
-      {/* ── Recent check-ins ───────────────────────────────────────── */}
-      <motion.section variants={item}>
-        <div className="flex items-baseline justify-between gap-3">
-          <SectionTitle>เช็คอินล่าสุด</SectionTitle>
-          <Link
-            href="/history"
-            className="shrink-0 font-sans text-sm text-link underline decoration-link-underline decoration-2 underline-offset-4 hover:text-link-hover"
-          >
-            ดูทั้งหมด
-          </Link>
-        </div>
-        <div className="mt-4 space-y-3">
-          {checkins.isLoading ? (
-            <PageSpinner />
-          ) : recent.length === 0 ? (
-            <EmptyState icon="✨" title="ยังไม่มีประวัติเช็คอิน">
-              สแกน QR ที่งานเพื่อเช็คอินครั้งแรกของคุณ
-            </EmptyState>
-          ) : (
-            recent.map((c) => (
-              <Card
-                key={c.id}
-                className="flex items-center justify-between gap-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-sans font-medium">
-                    {c.event.title}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatThaiDateTime(c.checkedInAt)}
-                  </p>
-                </div>
-                <PointsPill />
-              </Card>
-            ))
-          )}
-        </div>
-      </motion.section>
-
-      {/* ── Pastor tools ───────────────────────────────────────────── */}
-      {isPastor && (
-        <motion.section variants={item}>
-          <SectionTitle>สำหรับศิษยาภิบาล</SectionTitle>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <ActionCard href="/admin/events" icon="🗓️" label="จัดการกิจกรรม" />
-            <ActionCard href="/admin/members" icon="💗" label="จัดการสมาชิก" />
-          </div>
-        </motion.section>
-      )}
-
-      {/* ── Profile link ───────────────────────────────────────────── */}
-      <motion.section variants={item}>
-        <Link href="/profile" className="block">
-          <Card className="flex items-center justify-between hover:-translate-y-0.5 hover:border-decoration/40">
-            <span className="font-sans font-medium">ข้อมูลของฉัน</span>
-            <span aria-hidden className="text-decoration">→</span>
-          </Card>
-        </Link>
-      </motion.section>
     </motion.div>
+  );
+}
+
+/** The admin tab: pastor tools. */
+function PastorTools() {
+  return (
+    <motion.section
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="space-y-4"
+    >
+      <motion.div variants={item}>
+        <SectionTitle>สำหรับศิษยาภิบาล</SectionTitle>
+      </motion.div>
+      <motion.div variants={item}>
+        <ToolCard
+          href="/admin/events"
+          icon="🗓️"
+          label="จัดการกิจกรรม"
+          description="สร้างกิจกรรม แชร์ QR เช็คอิน และดูรายชื่อผู้เข้าร่วม"
+        />
+      </motion.div>
+      <motion.div variants={item}>
+        <ToolCard
+          href="/admin/members"
+          icon="💗"
+          label="จัดการสมาชิก"
+          description="ดูข้อมูลสมาชิกและประวัติเช็คอิน"
+        />
+      </motion.div>
+    </motion.section>
   );
 }
 
@@ -215,30 +284,32 @@ function PrismMedallion({ points }: { points: number }) {
   );
 }
 
-function PointsPill() {
-  return (
-    <span className="shrink-0 rounded-full bg-success/70 px-2.5 py-1 font-sans text-sm font-semibold text-success-foreground ring-1 ring-inset ring-success-accent/20">
-      +10
-    </span>
-  );
-}
-
-function ActionCard({
+function ToolCard({
   href,
   icon,
   label,
+  description,
 }: {
   href: string;
   icon: string;
   label: string;
+  description: string;
 }) {
   return (
     <Link href={href} className="block">
-      <Card className="flex flex-col items-center gap-3 py-6 text-center hover:-translate-y-0.5 hover:border-decoration/40">
-        <span className="grid size-12 place-items-center rounded-2xl bg-accent/70 text-2xl ring-1 ring-inset ring-decoration/15">
+      <Card className="flex items-center gap-4 hover:-translate-y-0.5 hover:border-decoration/40">
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent/70 text-2xl ring-1 ring-decoration/15 ring-inset">
           {icon}
         </span>
-        <span className="font-sans font-medium">{label}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-sans font-medium">{label}</span>
+          <span className="mt-0.5 block font-sans text-sm text-muted-foreground">
+            {description}
+          </span>
+        </span>
+        <span aria-hidden className="text-decoration">
+          →
+        </span>
       </Card>
     </Link>
   );

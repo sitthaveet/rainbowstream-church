@@ -13,7 +13,6 @@ import { useApi } from "@/lib/use-api";
 import {
   getUser,
   listUserCheckins,
-  updateRole,
   deleteMember,
   errorMessage,
   type ApiUser,
@@ -76,25 +75,6 @@ function MemberDetailContent({ id }: { id: string }) {
   const fullName =
     [member.firstName, member.lastName].filter(Boolean).join(" ") ||
     "ยังไม่ได้ลงทะเบียน";
-
-  const handleRoleToggle = async () => {
-    const nextRole = member.role === "pastor" ? "member" : "pastor";
-    const label =
-      nextRole === "pastor"
-        ? `แต่งตั้ง ${fullName} เป็นศิษยาภิบาล?`
-        : `ถอด ${fullName} จากศิษยาภิบาลเป็นสมาชิกทั่วไป?`;
-    if (!window.confirm(label)) return;
-    setBusy(true);
-    setActionError(null);
-    try {
-      await updateRole(id, nextRole);
-      await memberQ.reload();
-    } catch (err) {
-      setActionError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (
@@ -195,18 +175,8 @@ function MemberDetailContent({ id }: { id: string }) {
 
       {actionError && <Callout variant="error">{actionError}</Callout>}
 
-      <section className="space-y-3 border-t pt-6">
-        <Button
-          variant="outline"
-          className="w-full"
-          loading={busy}
-          onClick={handleRoleToggle}
-        >
-          {member.role === "pastor"
-            ? "ถอดจากศิษยาภิบาล"
-            : "แต่งตั้งเป็นศิษยาภิบาล"}
-        </Button>
-        {!isSelf && (
+      {!isSelf && (
+        <section className="space-y-3 border-t pt-6">
           <Button
             variant="destructive"
             className="w-full"
@@ -215,8 +185,8 @@ function MemberDetailContent({ id }: { id: string }) {
           >
             ลบสมาชิก
           </Button>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }

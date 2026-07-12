@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
+import { Menu } from "@/components/menu";
 
 /** Fixed header with the Prism signature: the logo sits in a soft spectral
  *  halo, a flowing rainbow beam underlines the bar, and a blurred translucent
@@ -24,6 +25,8 @@ export function Header() {
         style={{ opacity: bgOpacity }}
         className="absolute inset-0 border-b bg-gradient-to-b from-background/90 to-background/65 backdrop-blur-xl"
       />
+
+      <Menu />
 
       <Link href="/" className="relative" aria-label="หน้าหลัก">
         {/* Spectral halo behind the mark */}

@@ -21,7 +21,6 @@ import type {
   EventBrief,
   CreateEventInput,
   UpdateEventInput,
-  UserRole,
 } from "./types";
 
 // ─── Column lists ────────────────────────────────────────────────────────────
@@ -33,7 +32,8 @@ const USER_COLS =
   "self_introduction, points, role, registered_at, created_at, updated_at";
 
 const MEMBER_COLS =
-  "id, first_name, last_name, nickname, email, phone_number, points, role, created_at";
+  "id, first_name, last_name, nickname, email, phone_number, points, role, " +
+  "created_at, updated_at";
 
 // EVENT_COLS is the summary list plus updated_at — derive one from the other
 // so the shared columns never drift.
@@ -85,6 +85,7 @@ function toMemberSummary(r: any): MemberSummary {
     points: r.points,
     role: r.role,
     createdAt: r.created_at,
+    updatedAt: r.updated_at,
   };
 }
 
@@ -233,17 +234,6 @@ export async function updateUserProfile(
   const { rows } = await query(
     `update users set ${sets} where id = $1 returning ${USER_COLS}`,
     [id, ...values],
-  );
-  return rows[0] ? toUser(rows[0]) : null;
-}
-
-export async function updateUserRole(
-  id: string,
-  role: UserRole,
-): Promise<User | null> {
-  const { rows } = await query(
-    `update users set role = $2 where id = $1 returning ${USER_COLS}`,
-    [id, role],
   );
   return rows[0] ? toUser(rows[0]) : null;
 }

@@ -8,13 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSpinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/use-api";
-import { listMembers, errorMessage, type MemberSummary } from "@/lib/client";
-
-function memberName(m: MemberSummary): string {
-  const name = [m.firstName, m.lastName].filter(Boolean).join(" ");
-  if (name && m.nickname) return `${name} (${m.nickname})`;
-  return name || m.nickname || "ยังไม่ได้ลงทะเบียน";
-}
+import { listMembers, errorMessage } from "@/lib/client";
+import { displayName } from "@/lib/format";
 
 export default function AdminMembersPage() {
   return (
@@ -47,7 +42,7 @@ function MembersContent() {
               <Card className="flex items-center justify-between gap-3 hover:-translate-y-0.5 hover:border-decoration/40">
                 <div className="min-w-0">
                   <p className="truncate font-sans font-medium">
-                    {memberName(m)}
+                    {displayName(m)}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {m.points} แต้ม

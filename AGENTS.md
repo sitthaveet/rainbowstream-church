@@ -69,10 +69,9 @@ This project is a web-based for Rainbow Stream church management. It's very simp
 - **Schema setup**: run `database/schema.sql` in the Neon SQL editor or via
   `psql "$NEON_CONNECTION" -f database/schema.sql` (tables, enums, indexes,
   and the `check_in()` function for atomic check-in + points).
-- **First pastor bootstrap**: role changes require an existing pastor, so promote the founding
-  pastor manually in the Neon SQL editor:
+- **Roles**: there is no in-app role UI — promote (or demote) pastors directly in the Neon SQL
+  editor:
   `update users set role = 'pastor' where line_uid = '<LINE userId>';`
-  Everyone after that can be promoted in the app (จัดการสมาชิก).
 - **Environment variables** (`frontend/.env.local`):
   - `NEON_CONNECTION` — Postgres connection string for Neon (keep server-only; use the
     pooled `-pooler` endpoint in production).

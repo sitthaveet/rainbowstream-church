@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/", icon: "🏠", label: "หน้าหลัก" },
   { href: "/profile", icon: "💗", label: "ข้อมูลของฉัน" },
   { href: "/history", icon: "✨", label: "ประวัติเช็คอิน" },
+  { href: "/leaderboard", icon: "🏆", label: "อันดับแต้มสะสม" },
 ] as const;
 
 /** Hamburger menu pinned to the top-left of the fixed header, opening a
@@ -179,7 +180,7 @@ export function Menu() {
               <div className="px-5 pb-5">
                 <div aria-hidden className="spectral-rule h-px opacity-40" />
                 <p className="mt-3 text-center font-sans text-xs text-muted-foreground">
-                  Rainbow Stream · ลำธารสีรุ้ง
+                  Create a safe space for believers of all genders
                 </p>
               </div>
 

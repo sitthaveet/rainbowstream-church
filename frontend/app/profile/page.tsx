@@ -23,7 +23,7 @@ function ProfileContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="โปรไฟล์" title="ข้อมูลของฉัน">
+      <PageHeader eyebrow="" title="ข้อมูลของฉัน">
         แต้มสะสม{" "}
         <span className="font-sans font-semibold text-headings">
           {user!.points}

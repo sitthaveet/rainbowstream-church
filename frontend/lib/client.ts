@@ -14,6 +14,7 @@ import type {
   EventDetail as EventDetailRow,
   EventByCode,
   MemberSummary,
+  LeaderboardEntry,
   UserCheckin,
   EventCheckin,
 } from "@/lib/types";
@@ -34,7 +35,13 @@ export type EventDetail = Omit<EventDetailRow, "checkinCode"> & {
   checkinCode?: string;
 };
 
-export type { EventByCode, MemberSummary, UserCheckin, EventCheckin };
+export type {
+  EventByCode,
+  MemberSummary,
+  LeaderboardEntry,
+  UserCheckin,
+  EventCheckin,
+};
 
 /** Mirrors the server's profileSchema (lib/validation.ts) — all optional. */
 export interface ProfilePatch {
@@ -141,6 +148,9 @@ export const listUserCheckins = (id: string) =>
   request<{ checkins: UserCheckin[] }>(`/api/users/${id}/checkins`);
 
 export const listMembers = () => request<{ users: MemberSummary[] }>("/api/users");
+
+export const getLeaderboard = () =>
+  request<{ leaderboard: LeaderboardEntry[] }>("/api/leaderboard");
 
 export const deleteMember = (id: string) =>
   request<{ ok: true }>(`/api/users/${id}`, { method: "DELETE" });

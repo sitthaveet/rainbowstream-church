@@ -30,7 +30,7 @@ function HistoryContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="เส้นทางของฉัน" title="ประวัติเช็คอิน">
+      <PageHeader eyebrow="" title="ประวัติเช็คอิน">
         เช็คอินทั้งหมด {checkins.length} ครั้ง · แต้มสะสม{" "}
         <span className="font-sans font-semibold text-headings">
           {user!.points}

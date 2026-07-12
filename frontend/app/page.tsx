@@ -162,7 +162,6 @@ function MemberHome({ events }: { events: EventsApi }) {
     >
       {/* ── Hero ───────────────────────────────────────────────────── */}
       <motion.section variants={item} className="pt-2 text-center">
-        <p className="text-brand font-sans text-sm font-medium">ยินดีต้อนรับ</p>
         <h1 className="mt-1 text-4xl leading-tight">
           สวัสดี{" "}
           <span className="text-spectrum animate-spectrum-flow">

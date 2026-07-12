@@ -11,6 +11,7 @@ import { query } from "./pg";
 import type {
   User,
   MemberSummary,
+  LeaderboardEntry,
   ProfileFields,
   EventDetail,
   EventSummary,
@@ -244,6 +245,29 @@ export async function deleteUser(id: string): Promise<boolean> {
     id,
   ]);
   return rows.length > 0;
+}
+
+/**
+ * Top members by points for the leaderboard — names and points only (see
+ * LeaderboardEntry: no ids leave the server). Only registered members with
+ * points appear; ties break toward the longer-standing member so the order
+ * is stable between loads.
+ */
+export async function listLeaderboard(limit = 10): Promise<LeaderboardEntry[]> {
+  const { rows } = await query(
+    `select first_name, last_name, nickname, points
+       from users
+      where registered_at is not null and points > 0
+      order by points desc, created_at asc
+      limit $1`,
+    [limit],
+  );
+  return rows.map((r: any) => ({
+    firstName: r.first_name,
+    lastName: r.last_name,
+    nickname: r.nickname,
+    points: r.points,
+  }));
 }
 
 /**

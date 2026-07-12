@@ -72,6 +72,14 @@ export type MemberSummary = Pick<
   | "updatedAt"
 >;
 
+/** Leaderboard row — names and points only. Deliberately no `id`: the
+ *  leaderboard is a static list, and members must not be able to reach (or
+ *  even address) another member's profile from it. */
+export type LeaderboardEntry = Pick<
+  User,
+  "firstName" | "lastName" | "nickname" | "points"
+>;
+
 /** The profile fields a user may set — the write payload for updateUserProfile. */
 export type ProfileFields = Pick<
   User,

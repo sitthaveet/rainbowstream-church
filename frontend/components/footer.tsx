@@ -6,7 +6,7 @@ export function Footer() {
       <div className="flex flex-col items-center gap-2 py-8 text-center">
         <p className="font-display text-lg text-headings">ลำธารสีรุ้ง Rainbow Stream</p>
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Create a safe space for all gender believers</span>
+          <span>Create a safe space for believers of all genders</span>
         </p>
       </div>
     </footer>

@@ -39,7 +39,7 @@ function RegisterContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="ยินดีต้อนรับสู่ครอบครัว" title="ลงทะเบียนสมาชิก">
+      <PageHeader eyebrow="" title="ลงทะเบียนสมาชิก">
         กรอกข้อมูลสั้น ๆ เพื่อให้เรารู้จักคุณมากขึ้น
       </PageHeader>
 

@@ -1,17 +1,25 @@
-/** Thai-locale date/time formatting (`th-TH` uses the Buddhist calendar —
- *  พ.ศ. — by default, matching how members read dates) and other shared
- *  display formatting. */
+/** Thai-locale date/time formatting and other shared display formatting. */
+
+/** Thai month/time names, but Gregorian years (ค.ศ.). Plain `th-TH` would
+ *  default to the Buddhist calendar (พ.ศ. — 543 years ahead), so every date
+ *  formatter below must go through this locale. */
+const THAI_LOCALE = "th-TH-u-ca-gregory";
 
 /** "ชื่อ นามสกุล (ชื่อเล่น)" with graceful fallbacks for partly-filled
- *  profiles; unregistered users show as "ยังไม่ได้ลงทะเบียน". */
-export function displayName(user: {
-  firstName?: string | null;
-  lastName?: string | null;
-  nickname?: string | null;
-}): string {
+ *  profiles. The default fallback reads "not yet registered" (right for the
+ *  admin screens); pass one where that's misleading — e.g. the leaderboard
+ *  only lists registered users, who may still have left every name blank. */
+export function displayName(
+  user: {
+    firstName?: string | null;
+    lastName?: string | null;
+    nickname?: string | null;
+  },
+  fallback = "ยังไม่ได้ลงทะเบียน",
+): string {
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
   if (name && user.nickname) return `${name} (${user.nickname})`;
-  return name || user.nickname || "ยังไม่ได้ลงทะเบียน";
+  return name || user.nickname || fallback;
 }
 
 /** True while an event counts as upcoming: it has not yet ended as of `refMs`
@@ -25,25 +33,25 @@ export function isUpcomingEvent(
 }
 
 export function formatThaiDate(iso: string): string {
-  return new Intl.DateTimeFormat("th-TH", { dateStyle: "long" }).format(
+  return new Intl.DateTimeFormat(THAI_LOCALE, { dateStyle: "long" }).format(
     new Date(iso),
   );
 }
 
 export function formatThaiDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("th-TH", {
+  return new Intl.DateTimeFormat(THAI_LOCALE, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(iso));
 }
 
 export function formatThaiTime(iso: string): string {
-  return new Intl.DateTimeFormat("th-TH", { timeStyle: "short" }).format(
+  return new Intl.DateTimeFormat(THAI_LOCALE, { timeStyle: "short" }).format(
     new Date(iso),
   );
 }
 
-/** "12 มิ.ย. 2569 10:00 – 12:00" or just the start when no end is set. */
+/** "12 มิ.ย. 2026 10:00 – 12:00" or just the start when no end is set. */
 export function formatEventRange(startsAt: string, endsAt?: string | null): string {
   const start = formatThaiDateTime(startsAt);
   if (!endsAt) return start;

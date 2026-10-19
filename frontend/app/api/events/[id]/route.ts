@@ -1,27 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEventById, updateEvent, deleteEvent } from "@/lib/db";
-import { UserRole } from "@/lib/types";
 import { ApiError, handleRoute, parseBody } from "@/lib/api";
 import { requireAuth, requirePastor } from "@/lib/auth";
 import { updateEventSchema, assertUuid } from "@/lib/validation";
-import { stripCheckinCode } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** GET /api/events/[id] — a single event. `checkinCode` stripped for non-pastors. */
+/** GET /api/events/[id] — a single event. */
 export const GET = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
   const { id } = await ctx.params;
   assertUuid(id, "event id");
-  const caller = await requireAuth();
+  await requireAuth();
 
   const event = await getEventById(id);
   if (!event) throw new ApiError(404, "Event not found", "not_found");
 
-  return NextResponse.json({
-    event: caller.role === UserRole.pastor ? event : stripCheckinCode(event),
-  });
+  return NextResponse.json({ event });
 });
 
 /**

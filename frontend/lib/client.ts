@@ -2,17 +2,15 @@
  * Client-side API helper — the browser's only doorway to the route handlers.
  *
  * Types are derived from the domain types in `@/lib/types` with `import type`
- * only. The route JSON carries plain strings, and the events endpoints strip
- * `checkinCode` for non-pastors, so the list/detail event types widen it back
- * to optional here.
+ * only; the route JSON carries plain strings.
  */
 import type {
   User,
   SexAtBirth,
   IdentityOrientation,
-  EventSummary as EventSummaryRow,
-  EventDetail as EventDetailRow,
-  EventByCode,
+  EventSummary,
+  EventDetail,
+  CheckinEvent,
   MemberSummary,
   LeaderboardEntry,
   UserCheckin,
@@ -27,16 +25,10 @@ export type OrientationValue = IdentityOrientation;
 /** The user as serialized to the browser (enums are already string unions). */
 export type ApiUser = User;
 
-/** Events from list/detail endpoints: `checkinCode` is stripped for members. */
-export type EventSummary = Omit<EventSummaryRow, "checkinCode"> & {
-  checkinCode?: string;
-};
-export type EventDetail = Omit<EventDetailRow, "checkinCode"> & {
-  checkinCode?: string;
-};
-
 export type {
-  EventByCode,
+  EventSummary,
+  EventDetail,
+  CheckinEvent,
   MemberSummary,
   LeaderboardEntry,
   UserCheckin,
@@ -124,14 +116,20 @@ export const apiLogout = () =>
 
 // ─── Check-in ────────────────────────────────────────────────────────────────
 
-export const getEventByCode = (code: string) =>
-  request<{ event: EventByCode }>(`/api/events/by-code/${code}`);
-
+/** Check in with the scanned church QR code — joins (or creates) today's
+ *  gathering, returned as `event`. An unknown code is a 404. */
 export const checkIn = (checkinCode: string) =>
-  request<{ checkin: { id: string; eventId: string }; pointsAwarded: number }>(
-    "/api/checkins",
-    { method: "POST", body: JSON.stringify({ checkinCode }) },
-  );
+  request<{
+    checkin: { id: string; eventId: string };
+    pointsAwarded: number;
+    event: CheckinEvent;
+  }>("/api/checkins", {
+    method: "POST",
+    body: JSON.stringify({ checkinCode }),
+  });
+
+export const getChurchQr = () =>
+  request<{ checkinCode: string }>("/api/church-qr");
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 

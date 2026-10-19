@@ -139,13 +139,14 @@ export type EventInput = z.infer<typeof createEventSchema>;
 
 // ─── Check-in ────────────────────────────────────────────────────────────────
 
+/** Self-serve scan: the church QR's code (CHURCH_CHECKIN_CODE). */
 export const checkinSchema = z.strictObject({
   checkinCode: uuid,
 });
 
 /**
  * Pastor checking a member in from the admin event page. Carries the target
- * `userId` (the event comes from the URL) — pastor-only, so no `checkinCode`
+ * `userId` (the event comes from the URL) — pastor-only, so no QR code
  * proof-of-attendance is needed here.
  */
 export const adminCheckinSchema = z.strictObject({

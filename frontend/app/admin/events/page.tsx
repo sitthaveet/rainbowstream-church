@@ -55,11 +55,18 @@ function AdminEventsContent() {
     <div className="space-y-6">
       <PageHeader eyebrow="ศิษยาภิบาล" title="จัดการกิจกรรม" />
 
-      <Link href="/admin/events/new" className="block">
-        <Button className="w-full" size="lg">
-          + สร้างกิจกรรมใหม่
-        </Button>
-      </Link>
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/admin/events/new" className="block">
+          <Button className="w-full" size="lg">
+            + สร้างกิจกรรมใหม่
+          </Button>
+        </Link>
+        <Link href="/admin/qr" className="block">
+          <Button variant="outline" className="w-full" size="lg">
+            QR ประจำคริสตจักร
+          </Button>
+        </Link>
+      </div>
 
       <TabList
         tabs={TABS}
@@ -98,6 +105,7 @@ function AdminEventsContent() {
                 key={event.id}
                 event={event}
                 href={`/admin/events/${event.id}`}
+                showAutoBadge
               />
             ))}
           </div>

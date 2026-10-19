@@ -3,8 +3,6 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { QRCodeSVG } from "qrcode.react";
-import { useLIFF } from "@/providers/liff-providers";
 import { useAuth } from "@/providers/auth-provider";
 import { RequirePastor } from "@/components/guard";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,6 @@ import {
   listEventCheckins,
   listMembers,
   deleteEvent,
-  checkIn,
   adminCheckIn,
   errorMessage,
   ClientApiError,
@@ -44,18 +41,12 @@ export default function AdminEventDetailPage({
   );
 }
 
-function checkinUrl(checkinCode: string): string {
-  return `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/checkin?code=${checkinCode}`;
-}
-
 function EventDetailContent({ id }: { id: string }) {
   const router = useRouter();
-  const { liff } = useLIFF();
   const { user, refreshUser } = useAuth();
   const eventQ = useApi(() => getEvent(id), [id]);
   const checkinsQ = useApi(() => listEventCheckins(id), [id]);
   const membersQ = useApi(listMembers, []);
-  const [shareNote, setShareNote] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
   // Points awarded just now, or "already" when the server says we're in already.
@@ -76,7 +67,6 @@ function EventDetailContent({ id }: { id: string }) {
 
   const event = eventQ.data.event;
   const checkins = checkinsQ.data?.checkins ?? [];
-  const url = event.checkinCode ? checkinUrl(event.checkinCode) : null;
   const selfCheckedIn =
     selfResult !== null || checkins.some((c) => c.user.id === user?.id);
 
@@ -87,42 +77,14 @@ function EventDetailContent({ id }: { id: string }) {
     .filter((m) => !checkedInIds.has(m.id))
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 
-  const handleShare = async () => {
-    if (!url) return;
-    setShareNote(null);
-    const text = `ขอเชิญร่วมเช็คอินกิจกรรม "${event.title}"\n${url}`;
-    try {
-      if (liff?.isLoggedIn() && liff.isApiAvailable("shareTargetPicker")) {
-        const res = await liff.shareTargetPicker([{ type: "text", text }]);
-        if (res) setShareNote("แชร์เรียบร้อยแล้ว ✓");
-        return;
-      }
-      await navigator.clipboard.writeText(text);
-      setShareNote("คัดลอกลิงก์แล้ว ✓");
-    } catch {
-      setShareNote("แชร์ไม่สำเร็จ กรุณาลองใหม่");
-    }
-  };
-
-  const handleCopy = async () => {
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareNote("คัดลอกลิงก์แล้ว ✓");
-    } catch {
-      setShareNote("คัดลอกไม่สำเร็จ");
-    }
-  };
-
-  // The pastor running the event is an attendee too, but scanning your own QR
-  // from the phone that's displaying it is awkward — so check in straight from
-  // here, through the same endpoint the scan flow uses.
+  // The pastor running the event is an attendee too — one tap checks them in,
+  // through the same pastor-assisted endpoint as the member dropdown.
   const handleSelfCheckin = async () => {
-    if (!event.checkinCode) return;
+    if (!user) return;
     setCheckingIn(true);
     setActionError(null);
     try {
-      const res = await checkIn(event.checkinCode);
+      const res = await adminCheckIn(id, user.id);
       setSelfResult(res.pointsAwarded);
       await Promise.all([checkinsQ.reload(), refreshUser()]);
     } catch (err) {
@@ -205,61 +167,33 @@ function EventDetailContent({ id }: { id: string }) {
 
       {event.description && <Card>{event.description}</Card>}
 
-      {url && (
-        <section className="space-y-3">
-          <h2 className="text-center text-2xl">QR เช็คอิน</h2>
-          {/* Spectral frame around an always-white tile so the code scans
-              reliably in dark mode too */}
-          <div
-            className="mx-auto w-fit rounded-2xl p-[3px] shadow-lg shadow-primary/15"
-            style={{ background: "var(--gradient-conic)" }}
+      <section>
+        {selfCheckedIn ? (
+          <Callout
+            variant={typeof selfResult === "number" ? "success" : "accent"}
+            leading="✓"
           >
-            <div className="rounded-[calc(1rem-1px)] bg-white p-5">
-              <QRCodeSVG value={url} size={224} marginSize={1} />
-            </div>
-          </div>
-          <p className="text-center text-sm text-muted-foreground">
-            ให้ผู้ร่วมงานสแกนเพื่อเช็คอินและรับ 10 แต้ม
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" onClick={handleCopy}>
-              คัดลอกลิงก์
-            </Button>
-            <Button onClick={handleShare}>แชร์ผ่าน LINE</Button>
-          </div>
-          {shareNote && (
-            <p className="text-center text-sm text-muted-foreground">{shareNote}</p>
-          )}
-
-          <div className="border-t border-border/60 pt-3">
-            {selfCheckedIn ? (
-              <Callout
-                variant={typeof selfResult === "number" ? "success" : "accent"}
-                leading="✓"
-              >
-                {typeof selfResult === "number"
-                  ? `เช็คอินสำเร็จ! คุณได้รับ +${selfResult} แต้ม 🎉`
-                  : ALREADY_CHECKED_IN_MESSAGE}
-              </Callout>
-            ) : (
-              <Button
-                variant="outline"
-                className="w-full"
-                loading={checkingIn}
-                disabled={checkinsQ.isLoading}
-                onClick={handleSelfCheckin}
-              >
-                เช็คอินตัวเอง
-              </Button>
-            )}
-          </div>
-        </section>
-      )}
+            {typeof selfResult === "number"
+              ? `เช็คอินสำเร็จ! คุณได้รับ +${selfResult} แต้ม 🎉`
+              : ALREADY_CHECKED_IN_MESSAGE}
+          </Callout>
+        ) : (
+          <Button
+            variant="outline"
+            className="w-full"
+            loading={checkingIn}
+            disabled={checkinsQ.isLoading}
+            onClick={handleSelfCheckin}
+          >
+            เช็คอินตัวเอง
+          </Button>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-2xl">เช็คอินให้สมาชิก</h2>
         <p className="text-sm text-muted-foreground">
-          เลือกสมาชิกเพื่อเช็คอินแทน สำหรับผู้ที่ไม่สะดวกสแกน QR
+          เลือกสมาชิกเพื่อเช็คอินแทน — สมาชิกทั่วไปเช็คอินด้วย QR ประจำคริสตจักร
         </p>
         {membersQ.error ? (
           <Callout variant="error">{errorMessage(membersQ.error)}</Callout>

@@ -27,9 +27,10 @@ export const GET = handleRoute(async (_req: NextRequest, ctx: Ctx) => {
 /**
  * POST /api/events/[id]/checkins — pastor checks a member in on their behalf.
  *
- * Unlike the self-serve POST /api/checkins (which demands the scanned QR
- * `checkinCode` as proof of attendance), this takes the event id from the URL:
- * the caller is a pastor running the event, already trusted with the code.
+ * Unlike the self-serve POST /api/checkins (which demands the scanned church
+ * QR code as proof of attendance), this takes the event id from the URL: the
+ * caller is a pastor, trusted to vouch for attendance. Works for any event —
+ * a pastor-created one or a daily gathering.
  * Same `performCheckIn` underneath, so the member still earns points
  * atomically and a repeat check-in becomes a 409.
  */

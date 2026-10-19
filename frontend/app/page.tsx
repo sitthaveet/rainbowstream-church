@@ -237,7 +237,7 @@ function PastorTools() {
           href="/admin/events"
           icon="🗓️"
           label="จัดการกิจกรรม"
-          description="สร้างกิจกรรม แชร์ QR เช็คอิน และดูรายชื่อผู้เข้าร่วม"
+          description="สร้างกิจกรรม QR ประจำคริสตจักร และดูรายชื่อผู้เข้าร่วม"
         />
       </motion.div>
       <motion.div variants={item}>

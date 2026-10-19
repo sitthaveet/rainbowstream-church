@@ -9,14 +9,13 @@ import { AuthBoundary } from "@/components/guard";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
-import { PageSpinner, SpectralRing } from "@/components/ui/spinner";
+import { PageSpinner } from "@/components/ui/spinner";
 import { formatEventRange } from "@/lib/format";
 import {
   checkIn,
-  getEventByCode,
   errorMessage,
   ClientApiError,
-  type EventByCode,
+  type CheckinEvent,
 } from "@/lib/client";
 
 export default function CheckinPage() {
@@ -29,14 +28,7 @@ export default function CheckinPage() {
   );
 }
 
-type Phase =
-  | "loading"
-  | "invalid"
-  | "ready"
-  | "checking"
-  | "success"
-  | "already"
-  | "error";
+type Phase = "checking" | "invalid" | "success" | "already" | "error";
 
 function CheckinContent() {
   const { user, registered, refreshUser } = useAuth();
@@ -44,42 +36,14 @@ function CheckinContent() {
   const params = useSearchParams();
   const code = params.get("code");
 
-  const [phase, setPhase] = useState<Phase>(code ? "loading" : "invalid");
-  const [event, setEvent] = useState<EventByCode | null>(null);
+  const [phase, setPhase] = useState<Phase>(code ? "checking" : "invalid");
+  const [event, setEvent] = useState<CheckinEvent | null>(null);
   const [points, setPoints] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const autoFiredRef = useRef(false);
 
-  // Resolve the scanned code to its event. Depends on the stable user id,
-  // not the user object — refreshUser() after a successful check-in returns a
-  // fresh object, and re-running this effect would reset the phase from
-  // "success" back to "ready", wiping the celebration screen.
-  const userId = user?.id ?? null;
-  useEffect(() => {
-    if (!code || !userId) return;
-    let cancelled = false;
-    getEventByCode(code)
-      .then(({ event }) => {
-        if (cancelled) return;
-        setEvent(event);
-        setPhase("ready");
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        if (err instanceof ClientApiError && err.status === 404) {
-          setPhase("invalid");
-        } else {
-          setError(errorMessage(err));
-          setPhase("error");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [code, userId]);
-
   // Register-first gate: finish the profile, then come back — the check-in
-  // fires automatically once the event resolves on return.
+  // fires automatically on return.
   useEffect(() => {
     if (user && !registered && code) {
       const next = `/checkin?code=${encodeURIComponent(code)}`;
@@ -87,17 +51,22 @@ function CheckinContent() {
     }
   }, [user, registered, code, router]);
 
+  // The church QR has nothing to preview — its check-in joins (or, on the
+  // day's first scan, creates) today's gathering — so check in straight away.
   const doCheckin = useCallback(async () => {
     if (!code) return;
     setPhase("checking");
     try {
       const res = await checkIn(code);
+      setEvent(res.event);
       setPoints(res.pointsAwarded);
       setPhase("success");
       await refreshUser(); // pick up the new points balance
     } catch (err) {
       if (err instanceof ClientApiError && err.code === "already_checked_in") {
         setPhase("already");
+      } else if (err instanceof ClientApiError && err.status === 404) {
+        setPhase("invalid");
       } else {
         setError(errorMessage(err));
         setPhase("error");
@@ -105,26 +74,25 @@ function CheckinContent() {
     }
   }, [code, refreshUser]);
 
-  // Check in automatically as soon as the event resolves — no manual confirm.
-  // The guard ref ensures this fires exactly once, even though refreshUser()
-  // after success can re-render this component.
+  // Fire exactly once — refreshUser() after success re-renders this component,
+  // and the guard ref keeps that from checking in a second time.
   useEffect(() => {
-    if (phase === "ready" && registered && !autoFiredRef.current) {
+    if (code && registered && !autoFiredRef.current) {
       autoFiredRef.current = true;
       void doCheckin();
     }
-  }, [phase, registered, doCheckin]);
+  }, [code, registered, doCheckin]);
 
   if (!registered) return <PageSpinner label="กำลังไปหน้าลงทะเบียน…" />;
 
-  if (phase === "loading") return <PageSpinner label="กำลังตรวจสอบกิจกรรม…" />;
+  if (phase === "checking") return <PageSpinner label="กำลังเช็คอิน…" />;
 
   if (phase === "invalid") {
     return (
       <div className="space-y-4">
         <h1 className="text-center text-3xl">เช็คอินไม่สำเร็จ</h1>
         <Callout variant="error">
-          ไม่พบกิจกรรมจากรหัสนี้ — QR code อาจไม่ถูกต้องหรือกิจกรรมถูกยกเลิกแล้ว
+          QR code นี้ไม่ถูกต้อง — กรุณาสแกน QR เช็คอินของคริสตจักรอีกครั้ง
         </Callout>
         <BackHomeButton />
       </div>
@@ -168,13 +136,6 @@ function CheckinContent() {
         </Card>
       )}
 
-      {(phase === "ready" || phase === "checking") && (
-        <div className="flex flex-col items-center justify-center gap-3 py-6 text-muted-foreground">
-          <SpectralRing className="size-9" />
-          <p className="font-sans text-sm">กำลังเช็คอิน…</p>
-        </div>
-      )}
-
       {phase === "success" && <CheckinCelebration points={points} />}
 
       {phase === "already" && (
@@ -182,7 +143,7 @@ function CheckinContent() {
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-lg">
             ✓
           </span>
-          <span>คุณได้เช็คอินกิจกรรมนี้ไปแล้ว — ขอบคุณที่มาร่วมงานนะ 💗</span>
+          <span>คุณได้เช็คอินวันนี้ไปแล้ว — ขอบคุณที่มาร่วมงานนะ 💗</span>
         </Callout>
       )}
 

@@ -28,9 +28,15 @@ This project is a web-based for Rainbow Stream church management. It's very simp
 - User scan QR code at the event to check in.
 - If user is not logged in, they will be prompted to login with their LINE account and register their account, then it will check in automatically after registration.
 - If user is already logged in, it will check in immediately after scanning the QR code.
+- There is exactly one check-in QR — the **church QR** (static, printed once; `/admin/qr`).
+  Events have no QR of their own. The first scan of the day (Asia/Bangkok) auto-creates that
+  day's gathering (`events.gathering_date`), ending 23:59 (scans join it until midnight); every scan that day joins it
+  (`church_check_in()` in `database/schema.sql`).
+- Pastor-created events are checked into only by a pastor, from the event's admin page
+  (pastor-assisted check-in, `POST /api/events/[id]/checkins`).
 - Once logged in, users can check-in and view their profile and check-in history.
 - For each check in, users will earn 10 points. Points can be used to redeem rewards in the future (not implemented yet).
-- For pastors, they can create and manage events, share QR code of the event, view check-in data, and manage member information.
+- For pastors, they can create and manage events, print the church QR, check members in, view check-in data, and manage member information.
 
 # Context
 - For Design go to @DESIGN.md
@@ -78,6 +84,8 @@ This project is a web-based for Rainbow Stream church management. It's very simp
   - `SESSION_SECRET` — signs the JWT session cookie.
   - `NEXT_PUBLIC_LIFF_ID` — passed to `liff.init()`.
   - `NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID` — LINE Login channel ID, used to verify ID tokens.
+  - `CHURCH_CHECKIN_CODE` — a UUID the church-wide static QR encodes (server-only; pastors read
+    it via `/api/church-qr`). Changing it invalidates every printed copy of the QR.
 - **Local dev**: `cd frontend && npm run dev` (Neon is hosted; no local DB emulator).
 
 # References

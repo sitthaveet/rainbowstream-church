@@ -100,7 +100,7 @@ export type ProfileFields = Pick<
 
 // ─── Events ──────────────────────────────────────────────────────────────────
 
-/** A full event row, including the QR `checkinCode` secret. */
+/** A full event row. */
 export interface EventDetail {
   id: string;
   title: string;
@@ -108,8 +108,9 @@ export interface EventDetail {
   location: string | null;
   startsAt: string;
   endsAt: string | null;
-  checkinCode: string;
   createdById: string | null;
+  /** Set (YYYY-MM-DD) on a daily gathering auto-created by the church QR. */
+  gatheringDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -117,8 +118,8 @@ export interface EventDetail {
 /** Event-list projection (same as detail without `updatedAt`). */
 export type EventSummary = Omit<EventDetail, "updatedAt">;
 
-/** Minimal event returned when resolving a scanned QR code (no `checkinCode`). */
-export type EventByCode = Pick<
+/** Minimal event returned by a church QR check-in (the day's gathering). */
+export type CheckinEvent = Pick<
   EventDetail,
   "id" | "title" | "description" | "location" | "startsAt" | "endsAt"
 >;

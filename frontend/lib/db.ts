@@ -15,7 +15,7 @@ import type {
   ProfileFields,
   EventDetail,
   EventSummary,
-  EventByCode,
+  CheckinEvent,
   EventCheckin,
   UserCheckin,
   UserBrief,
@@ -39,12 +39,12 @@ const MEMBER_COLS =
 // EVENT_COLS is the summary list plus updated_at — derive one from the other
 // so the shared columns never drift.
 const EVENT_SUMMARY_COLS =
-  "id, title, description, location, starts_at, ends_at, checkin_code, " +
-  "created_by, created_at";
+  "id, title, description, location, starts_at, ends_at, created_by, " +
+  "gathering_date, created_at";
 
 const EVENT_COLS = EVENT_SUMMARY_COLS + ", updated_at";
 
-const EVENT_BY_CODE_COLS =
+const CHECKIN_EVENT_COLS =
   "id, title, description, location, starts_at, ends_at";
 
 // ─── Row → domain mappers ──────────────────────────────────────────────────────
@@ -98,8 +98,8 @@ function toEventDetail(r: any): EventDetail {
     location: r.location,
     startsAt: r.starts_at,
     endsAt: r.ends_at,
-    checkinCode: r.checkin_code,
     createdById: r.created_by,
+    gatheringDate: r.gathering_date,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -113,13 +113,13 @@ function toEventSummary(r: any): EventSummary {
     location: r.location,
     startsAt: r.starts_at,
     endsAt: r.ends_at,
-    checkinCode: r.checkin_code,
     createdById: r.created_by,
+    gatheringDate: r.gathering_date,
     createdAt: r.created_at,
   };
 }
 
-function toEventByCode(r: any): EventByCode {
+function toCheckinEvent(r: any): CheckinEvent {
   return {
     id: r.id,
     title: r.title,
@@ -299,16 +299,6 @@ export async function getEventById(id: string): Promise<EventDetail | null> {
   return rows[0] ? toEventDetail(rows[0]) : null;
 }
 
-export async function getEventByCheckinCode(
-  checkinCode: string,
-): Promise<EventByCode | null> {
-  const { rows } = await query(
-    `select ${EVENT_BY_CODE_COLS} from events where checkin_code = $1`,
-    [checkinCode],
-  );
-  return rows[0] ? toEventByCode(rows[0]) : null;
-}
-
 export async function createEvent(
   input: CreateEventInput,
 ): Promise<EventDetail> {
@@ -371,6 +361,31 @@ export async function checkInUser(
     userId,
   ]);
   return { id: rows[0].id as string };
+}
+
+/**
+ * Check a member into today's gathering via the church-wide static QR, using
+ * the `church_check_in` Postgres function: it creates the day's gathering on
+ * the first scan, then runs `check_in` (same 23505 → 409 semantics as
+ * checkInUser). Returns the gathering so the scan page can show it.
+ *
+ * The gathering is read in a second statement on purpose: a query joining
+ * `events` to `church_check_in()` runs on a snapshot taken before the function
+ * inserts the day's first gathering, so the join would come back empty.
+ */
+export async function churchCheckInUser(
+  userId: string,
+): Promise<{ id: string; event: CheckinEvent }> {
+  const { rows } = await query(
+    `select event_id, checkin_id from church_check_in($1)`,
+    [userId],
+  );
+  const { event_id, checkin_id } = rows[0];
+  const { rows: events } = await query(
+    `select ${CHECKIN_EVENT_COLS} from events where id = $1`,
+    [event_id],
+  );
+  return { id: checkin_id as string, event: toCheckinEvent(events[0]) };
 }
 
 export async function listEventCheckins(

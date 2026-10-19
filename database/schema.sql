@@ -128,7 +128,8 @@ create table if not exists events (
   starts_at     timestamptz not null,
   ends_at       timestamptz,
 
-  -- Check-in: code embedded in the QR attendees scan at the event.
+  -- Legacy: the per-event QR code, from before the church-wide static QR
+  -- became the only QR. The app no longer reads it; safe to drop.
   checkin_code  uuid not null unique default gen_random_uuid(),
 
   -- Pastor who created the event. ON DELETE SET NULL: an event stands on its
@@ -143,6 +144,15 @@ create table if not exists events (
 create or replace trigger events_set_updated_at
   before update on events
   for each row execute function set_updated_at();
+
+-- Daily gathering marker: set (to the Asia/Bangkok calendar date) on events
+-- auto-created by the church-wide static QR — see church_check_in() below.
+-- NULL for pastor-created events. The unique index makes it one gathering per
+-- day (NULLs are distinct, so pastor events never clash) and is the arbiter
+-- for church_check_in()'s `on conflict`.
+alter table events add column if not exists gathering_date date;
+create unique index if not exists events_gathering_date_key
+  on events (gathering_date);
 
 -- Postgres does NOT auto-index FK columns (unlike Data Connect). Index the FK
 -- so "events created by this pastor" lookups and SET NULL cascades stay fast.
@@ -191,6 +201,48 @@ begin
   return v_checkin_id;
 end;
 $$;
+
+-- ─── church_check_in() — check-in via the church-wide static QR ────────────
+-- The static QR has no event of its own: the first scan of the day (Asia/
+-- Bangkok) creates that day's gathering, ending 23:59 local time so it stays
+-- within its own day (a midnight end would equal the next day's start and
+-- read as still "upcoming" tomorrow). Every scan that day — morning or
+-- evening — checks into it; joining keys off gathering_date, not ends_at, so
+-- a scan in the last minute before midnight still lands. `on conflict do
+-- nothing` on the gathering_date unique index makes concurrent first scans
+-- converge on one row. Delegates to check_in() so the points rule lives in one
+-- place; a duplicate check-in raises 23505 and rolls back the whole call,
+-- including a gathering it just created.
+create or replace function church_check_in(p_user_id uuid)
+returns table (event_id uuid, checkin_id uuid)
+language plpgsql
+as $$
+declare
+  v_today date := (now() at time zone 'Asia/Bangkok')::date;
+  v_event_id uuid;
+begin
+  insert into events (title, starts_at, ends_at, gathering_date)
+  values (
+    'Gathering ' || to_char(v_today, 'DD-MM-YYYY'),
+    now(),
+    (v_today + time '23:59') at time zone 'Asia/Bangkok',
+    v_today
+  )
+  on conflict (gathering_date) do nothing;
+
+  select e.id into v_event_id from events e where e.gathering_date = v_today;
+
+  return query select v_event_id, check_in(v_event_id, p_user_id);
+end;
+$$;
+
+-- Backfill gatherings created when church_check_in() still ended them at the
+-- following midnight. Matches only that exact untouched value, so re-runs and
+-- pastor-edited end times are left alone.
+update events
+  set ends_at = (gathering_date + time '23:59') at time zone 'Asia/Bangkok'
+  where gathering_date is not null
+    and ends_at = (gathering_date + 1)::timestamp at time zone 'Asia/Bangkok';
 
 -- ─── Row Level Security ─────────────────────────────────────────────────────
 -- RLS is intentionally left DISABLED (the Postgres default). The browser never

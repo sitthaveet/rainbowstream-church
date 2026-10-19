@@ -10,11 +10,14 @@ interface EventCardProps {
     location?: string | null;
     startsAt: string;
     endsAt?: string | null;
+    gatheringDate?: string | null;
   };
   href?: string;
+  /** Tag auto-created daily gatherings (pastor views only). */
+  showAutoBadge?: boolean;
 }
 
-export function EventCard({ event, href }: EventCardProps) {
+export function EventCard({ event, href, showAutoBadge }: EventCardProps) {
   const body = (
     <Card
       className={cn(
@@ -28,7 +31,14 @@ export function EventCard({ event, href }: EventCardProps) {
         aria-hidden
         className="spectral-rule absolute inset-y-0 left-0 w-1.5"
       />
-      <h3 className="text-lg leading-snug">{event.title}</h3>
+      <h3 className="text-lg leading-snug">
+        {event.title}
+        {showAutoBadge && event.gatheringDate && (
+          <span className="ml-2 inline-block rounded-full bg-shade px-2 py-0.5 align-middle font-sans text-xs text-muted-foreground">
+            อัตโนมัติ
+          </span>
+        )}
+      </h3>
       <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
         <span aria-hidden>🗓️</span>
         {formatEventRange(event.startsAt, event.endsAt)}

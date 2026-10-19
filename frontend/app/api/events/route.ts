@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listEvents, createEvent } from "@/lib/db";
-import { UserRole } from "@/lib/types";
 import { handleRoute, parseBody } from "@/lib/api";
 import { requireAuth, requirePastor } from "@/lib/auth";
 import { createEventSchema } from "@/lib/validation";
-import { stripCheckinCode } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-/**
- * GET /api/events — all events, soonest first.
- * `checkinCode` (the QR secret) is stripped for non-pastors.
- */
+/** GET /api/events — all events, soonest first. */
 export const GET = handleRoute(async () => {
-  const caller = await requireAuth();
+  await requireAuth();
   const events = await listEvents();
-  return NextResponse.json({
-    events:
-      caller.role === UserRole.pastor ? events : events.map(stripCheckinCode),
-  });
+  return NextResponse.json({ events });
 });
 
 /** POST /api/events — create an event (pastor only). */
